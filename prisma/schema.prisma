@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String   @id @default(cuid())
+  clerkId         String   @unique
+  email           String   @unique
+  role            Role
+  parentId        String?
+  parent          User?    @relation("Hierarchy", fields: [parentId], references: [id])
+  children        User[]   @relation("Hierarchy")
+  originatedLoans Loan[]   @relation("Originator")
+  assignedLoans   Loan[]   @relation("Processor")
+}
+
+enum Role {
+  SUPER_ADMIN
+  LENDING_SUPERVISOR
+  LOAN_PROCESSOR
+  SENIOR_AE
+  ACCOUNT_EXECUTIVE
+  BROKER
+}
+
+model LoanProduct {
+  id         String      @id @default(cuid())
+  name       String
+  guidelines Guideline[]
+}
+
+model Guideline {
+  id         String      @id @default(cuid())
+  productId  String
+  fileUrl    String
+  filename   String
+  product    LoanProduct @relation(fields: [productId], references: [id])
+}
+
+model Loan {
+  id             String     @id @default(cuid())
+  productId      String
+  originatorId   String
+  processorId    String?
+  status         LoanStatus @default(PENDING)
+
+  // Relations back to User
+  originator     User       @relation("Originator", fields: [originatorId], references: [id])
+  processor      User?      @relation("Processor", fields: [processorId], references: [id])
+
+  documents      Document[]
+}
+
+model Document {
+  id          String    @id @default(cuid())
+  loanId      String
+  type        DocType
+  status      DocStatus @default(NEEDED)
+  fileUrl     String?
+  notes       String?
+  xaiFeedback String?
+  loan        Loan      @relation(fields: [loanId], references: [id])
+}
+
+enum DocType {
+  DRIVERS_LICENSE
+  CREDIT_REPORT
+  BACKGROUND_CHECK
+  BANK_STATEMENTS
+  PURCHASE_CONTRACT
+  PREV_CLOSING_STATEMENT
+  PROPERTY_INSURANCE
+  TITLE_COMMITMENT
+  CREDIT_APPLICATION
+}
+
+enum DocStatus {
+  NEEDED
+  REVIEWING
+  APPROVED
+}
+
+enum LoanStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}

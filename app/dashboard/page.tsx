@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 
 const loanStatuses = [
   'Processing', 'Underwriting', 'Clear to Close', 
@@ -12,6 +13,7 @@ const loanStatuses = [
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const router = useRouter();
 
   const [activeLoans, setActiveLoans] = useState<any[]>([]);
@@ -21,10 +23,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
 
-  // New tab system
   const [activeTab, setActiveTab] = useState<'start' | 'price' | 'applications' | 'inprocess' | 'active' | 'closed' | 'users'>('start');
 
-  // Users management state (your original code)
+  // Users management state
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState('BROKER_AE');
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -56,10 +57,8 @@ export default function DashboardPage() {
     }
 
     async function loadAllData() {
-      // Explicit guard - this fixes the TypeScript error
       if (!user) return;
 
-      // Get current user role
       const { data: userData } = await supabase
         .from('users')
         .select('role')
@@ -69,7 +68,6 @@ export default function DashboardPage() {
       const role = userData?.role || 'BROKER_AE';
       setCurrentUserRole(role);
 
-      // Load loans
       const { data: loansData } = await supabase
         .from('loans')
         .select('*')
@@ -85,7 +83,6 @@ export default function DashboardPage() {
       setActiveLoans(active);
       setClosedLoans(closed);
 
-      // Load loan applications
       const { data: appData } = await supabase
         .from('loan_applications')
         .select('*')
@@ -94,7 +91,6 @@ export default function DashboardPage() {
 
       setApplications(appData || []);
 
-      // Load users (if allowed)
       if (isSuperAdmin || isLendingSupervisor || isSeniorAE || isAE || isBroker) {
         const { data: usersData } = await supabase
           .from('users')
@@ -108,6 +104,10 @@ export default function DashboardPage() {
 
     loadAllData();
   }, [isLoaded, user, router]);
+
+ const handleLogout = () => {
+  signOut({ redirectUrl: '/' });   // Go to home page instead of /sign-in
+};
 
   const addNewUser = async () => {
     if (!newUserEmail.trim()) return;
@@ -193,11 +193,35 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-4xl font-bold">Dashboard</h1>
-          <p className="text-gray-600 mt-2">Role: <span className="font-medium">{currentUserRole}</span></p>
+      {/* Header with Profile Picture */}
+      <div className="flex justify-between items-center mb-10 border-b pb-6">
+        <div className="flex items-center gap-4">
+          {user?.imageUrl && (
+            <Image 
+              src={user.imageUrl} 
+              alt="Profile" 
+              width={64} 
+              height={64} 
+              className="rounded-full border-2 border-gray-200"
+            />
+          )}
+          <div>
+            <h1 className="text-4xl font-bold">Dashboard</h1>
+            <p className="text-gray-600">
+              Welcome back, <span className="font-medium">
+                {user?.fullName || user?.primaryEmailAddress?.emailAddress || 'User'}
+              </span>
+            </p>
+            <p className="text-sm text-gray-500">Role: <span className="font-medium">{currentUserRole}</span></p>
+          </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-medium transition-colors"
+        >
+          Logout
+        </button>
       </div>
 
       {/* Tabs */}
@@ -260,7 +284,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Original Active / Closed Loans */}
       {(activeTab === 'active' || activeTab === 'closed') && (
         <div className="bg-white rounded-3xl shadow-sm border divide-y">
           {(activeTab === 'active' ? activeLoans : closedLoans).map((loan) => (
@@ -280,7 +303,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Users Management - your original full code preserved */}
       {activeTab === 'users' && (
         <div className="bg-white rounded-3xl border p-8">
           <h2 className="text-2xl font-semibold mb-6">Users Management</h2>

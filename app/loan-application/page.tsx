@@ -1,16 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import html2pdf from 'html2pdf.js';
 import dynamic from 'next/dynamic';
+import { useSupabase } from '@/hooks/useSupabase';
 
-// Only SignatureCanvas needs dynamic import (it's a React component)
 const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false }) as any;
 
-// html2pdf is imported inside the function only when needed
 interface Borrower {
   fullName: string;
   dateOfBirth: string;
@@ -20,10 +17,7 @@ interface Borrower {
   race: string;
   sex: string;
   declarationsExplanation: string;
-
-  // Allow boolean fields for declarations
   [key: string]: string | boolean | undefined;
-
   judgments?: boolean;
   bankruptcy?: boolean;
   foreclosure?: boolean;
@@ -37,27 +31,31 @@ interface Borrower {
   residentAlien?: boolean;
   primaryResidence?: boolean;
 }
+
 export default function LoanApplicationPage() {
-  const router = useRouter();  
+  const router = useRouter();
+  const { user } = useUser();
+  const supabase = useSupabase();           // ← This replaces the old state
+
   const sigPad = useRef<any>(null);
+
+  const [isClient, setIsClient] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  
 
-  // ← ADD THE NEW BORROWERS STATE HERE
-const [borrowers, setBorrowers] = useState<Borrower[]>([{
-  fullName: '',
-  dateOfBirth: '',
-  socialSecurity: '',
-  fullHomeAddress: '',
-  ethnicity: '',
-  race: '',
-  sex: '',
-  declarationsExplanation: '',
-}]);
+  // Borrowers
+  const [borrowers, setBorrowers] = useState<Borrower[]>([{
+    fullName: '',
+    dateOfBirth: '',
+    socialSecurity: '',
+    fullHomeAddress: '',
+    ethnicity: '',
+    race: '',
+    sex: '',
+    declarationsExplanation: '',
+  }]);
 
-  // Your existing big form state goes here
+  // Form Data
   const [form, setForm] = useState({
-    // Step 1 - Property & Borrower Profile
     propertyAddress: '1810 S Valrico Rd',
     city: 'Valrico',
     county: 'Hillsborough',
@@ -85,7 +83,6 @@ const [borrowers, setBorrowers] = useState<Borrower[]>([{
     pud: false,
     vacant: false,
 
-    // Step 2 - Loan Request & Purpose
     loanAmount: '',
     ltv: '',
     acquisition: true,
@@ -103,7 +100,6 @@ const [borrowers, setBorrowers] = useState<Borrower[]>([{
     refinanceRehab: '',
     refinanceLastListed: '',
 
-    // Step 4 - Entity Information
     entityName: '',
     entityTaxId: '',
     entityStateFiled: '',
@@ -114,11 +110,9 @@ const [borrowers, setBorrowers] = useState<Borrower[]>([{
     propertyHeldInBorrowingEntity: true,
     propertyHeldInName: '',
 
-    // Previous lender
     previousFunding: false,
     previousFundingReason: '',
 
-    // Declarations
     judgments: false,
     bankruptcy: false,
     foreclosure: false,
@@ -132,22 +126,22 @@ const [borrowers, setBorrowers] = useState<Borrower[]>([{
     residentAlien: false,
     primaryResidence: false,
 
-    // Demographics
     ethnicity: '',
     race: '',
     sex: '',
-    // ← Add the 4 lines here
     dateOfBirth: '',
     socialSecurity: '',
     fullHomeAddress: '',
     declarationsExplanation: '',
-   
   });
 
   const [rentRoll, setRentRoll] = useState([{ unit: '1', type: 'Residential', monthlyRent: '3700', leaseStart: '3/1/2026', leaseEnd: '2/28/2027' }]);
   const [owners, setOwners] = useState([{ name: 'Alyssa Atchley', ownership: '100' }]);
-  
-  // Raw change handler
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target as any;
     setForm(prev => ({
@@ -156,126 +150,73 @@ const [borrowers, setBorrowers] = useState<Borrower[]>([{
     }));
   };
 
-  // Format on blur with your exact digit-based comma logic
-const handleFormatBlur = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-  let num = e.target.value.replace(/[^0-9.]/g, '');
-  if (num === '') return;
-  const parts = num.split('.');
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  setForm(prev => ({ ...prev, [field]: parts.join('.') }));
-};
-const addBorrower = () => {
-  setBorrowers(prev => [...prev, {
-    fullName: '',
-    dateOfBirth: '',
-    socialSecurity: '',
-    fullHomeAddress: '',
-    ethnicity: '',
-    race: '',
-    sex: '',
-    declarationsExplanation: '',
-  }]);
-};
-
-const updateBorrowerField = (index: number, field: string, value: string | boolean) => {
-  setBorrowers(prev => {
-    const updated = [...prev];
-    updated[index] = { ...updated[index], [field]: value };
-    return updated;
-  });
-};
-  const { user } = useUser();   // Make sure this line exists near the top of the component
-
-  const handleSubmit = async () => {
-    if (!user) {
-      alert('Please sign in to submit the application');
-      return;
-    }
-
-    const element = document.getElementById('loan-application-form');
-    if (!element) {
-      alert('Error: Could not find the form element. Please refresh and try again.');
-      return;
-    }
-
-    // Generate PDF
-    const opt = {
-      margin: 10,
-      filename: `Loan-Application-${Date.now()}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-    };
-
-    await html2pdf().set(opt).from(element).save();
-
-    // Save to Supabase
-    const { data, error } = await supabase
-      .from('loan_applications')
-      .insert({
-        user_id: user.id,
-        form_data: form,
-        borrowers: borrowers,
-        status: 'submitted',
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      alert('Failed to save application: ' + error.message);
-    } else {
-      alert('Application submitted successfully!');
-      router.push(`/loans/new?id=${data.id}`);
-    }
+  const handleFormatBlur = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    let num = e.target.value.replace(/[^0-9.]/g, '');
+    if (num === '') return;
+    const parts = num.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    setForm(prev => ({ ...prev, [field]: parts.join('.') }));
   };
 
+  const addBorrower = () => {
+    setBorrowers(prev => [...prev, {
+      fullName: '', dateOfBirth: '', socialSecurity: '', fullHomeAddress: '',
+      ethnicity: '', race: '', sex: '', declarationsExplanation: '',
+    }]);
+  };
 
+  const updateBorrowerField = (index: number, field: string, value: string | boolean) => {
+    setBorrowers(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+const handleSubmit = async () => {
+  if (!user) {
+    alert('Please sign in to submit the application.');
+    return;
+  }
+
+  try {
+    console.log("🚀 Submitting via Server Action...");
+
+    const { submitLoanApplication } = await import('@/app/actions/submitApplication');
+
+    const result = await submitLoanApplication(user.id, form, borrowers);
+
+    console.log("✅ SUCCESS:", result);
+    alert('✅ Application submitted successfully!');
+    router.push(`/loans/new?id=${result.id}`);
+  } catch (err: any) {
+    console.error("Submit failed:", err);
+    alert('Error submitting application: ' + err.message);
+  }
+};
   const calculateLoanFromLtv = () => {
     if (form.estimatedValue && form.ltv) {
-      const calculated = Math.round(parseFloat(form.estimatedValue) * parseFloat(form.ltv)/100);
+      const calculated = Math.round(parseFloat(form.estimatedValue) * parseFloat(form.ltv) / 100);
       setForm(prev => ({ ...prev, loanAmount: calculated.toString() }));
     }
   };
 
-  const formatDollar = (value: string) => {
-    if (!value) return '';
-    const num = parseFloat(value);
-    return num ? `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
-  };
-
   const addRentRow = () => setRentRoll([...rentRoll, { unit: '', type: '', monthlyRent: '', leaseStart: '', leaseEnd: '' }]);
   const addOwnerRow = () => setOwners([...owners, { name: '', ownership: '' }]);
-
   const clearSignature = () => sigPad.current?.clear();
-
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
-  const downloadPDF = async () => {
-    const element = document.getElementById('loan-form');
-    if (!element) return;
-    const opt = {
-      margin: 10,
-      filename: `Loan_Application_${form.borrowerName || 'Alyssa'}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-    };
-    const html2pdfModule = await import('html2pdf.js');
-    html2pdfModule.default().set(opt).from(element).save();
-  };
+  if (!isClient) {
+    return <div className="p-10 text-center text-xl">Loading application form...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white min-h-screen">
-      
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex justify-between text-sm mb-2 font-medium">
           <div>Step {currentStep} of 5</div>
         </div>
-        
         <div className="h-3 bg-gray-200 rounded-3xl overflow-hidden">
           <div className="h-full bg-black transition-all duration-300" style={{ width: `${(currentStep / 5) * 100}%` }} />
         </div>
@@ -286,7 +227,8 @@ const updateBorrowerField = (index: number, field: string, value: string | boole
       </div>
 
       <div id="loan-application-form" className="border-2 border-black rounded-3xl p-10 bg-white min-h-[650px]">
-
+  
+  
         {/* STEP 1 - Property & Borrower Profile */}
 {currentStep === 1 && (
   <div>
@@ -496,7 +438,7 @@ const updateBorrowerField = (index: number, field: string, value: string | boole
       <div>
         <strong>Loan Amount Request:</strong>
         <input 
-          value={formatDollar(form.loanAmount)} 
+          value={form.loanAmount ? `$${parseFloat(form.loanAmount).toLocaleString('en-US')}` : ''}
           readOnly 
           className="w-full border-b bg-gray-100 focus:outline-none" 
         />
@@ -925,29 +867,28 @@ const updateBorrowerField = (index: number, field: string, value: string | boole
 
   </div>
 )}
-              </div> {/* close loan-form div */}
+    </div>
 
       {/* Navigation Buttons */}
-    {/* Navigation Buttons */}
-<div className="flex justify-between mt-12">
-  <button 
-    onClick={prevStep} 
-    disabled={currentStep === 1}
-    className="px-12 py-6 border-2 border-black rounded-3xl text-lg disabled:opacity-40"
-  >
-    ← Previous
-  </button>
+      <div className="flex justify-between mt-12">
+        <button 
+          onClick={prevStep} 
+          disabled={currentStep === 1}
+          className="px-12 py-6 border-2 border-black rounded-3xl text-lg disabled:opacity-40"
+        >
+          ← Previous
+        </button>
 
-  {currentStep < 5 ? (
-    <button onClick={nextStep} className="px-12 py-6 bg-black text-white rounded-3xl text-lg">
-      Next →
-    </button>
-  ) : (
-    <button onClick={handleSubmit} className="px-12 py-6 bg-black text-white rounded-3xl text-lg">
-      Submit Application
-    </button>
-  )}
-</div>
+        {currentStep < 5 ? (
+          <button onClick={nextStep} className="px-12 py-6 bg-black text-white rounded-3xl text-lg">
+            Next →
+          </button>
+        ) : (
+          <button onClick={handleSubmit} className="px-12 py-6 bg-black text-white rounded-3xl text-lg">
+            Submit Application
+          </button>
+        )}
+      </div>
     </div>
   );
 }

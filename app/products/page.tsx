@@ -30,7 +30,10 @@ export default function ProductsPage() {
   }, []);
 
   async function fetchProducts() {
-    const { data } = await supabase.from('loan_products').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('loan_products')
+      .select('*')
+      .order('created_at', { ascending: false });
     setProducts(data || []);
     setLoading(false);
   }
@@ -43,6 +46,7 @@ export default function ProductsPage() {
         name: newName.trim(), 
         description: newDesc.trim() || null, 
         pricing_matrix: {},
+        default_profit_percent: 1.0,
         active: true 
       })
       .select()
@@ -65,11 +69,56 @@ export default function ProductsPage() {
     else fetchProducts();
   };
 
+  const updateProfit = async (productId: number, newProfit: number) => {
+    const { error } = await supabase
+      .from('loan_products')
+      .update({ default_profit_percent: newProfit })
+      .eq('id', productId);
+
+    if (error) alert(error.message);
+    else fetchProducts();
+  };
+
+ 
+  // ✅ Fixed Guidelines PDF Upload
   const handleGuidelinesUpload = async (productId: string, file: File) => {
-    // Your original guidelines upload code goes here (unchanged)
+    if (!file) return;
     setUploadingId(productId);
-    // ... rest of your upload logic ...
-    setUploadingId(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${productId}-${Date.now()}.${fileExt}`;
+
+      // Upload file
+      const { error: uploadError } = await supabase.storage
+        .from('product-guidelines')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('product-guidelines')
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+
+      // Save URL to product
+      const { error: updateError } = await supabase
+        .from('loan_products')
+        .update({ guidelines_url: publicUrl })
+        .eq('id', parseInt(productId));
+
+      if (updateError) throw updateError;
+
+      alert('✅ Guidelines PDF uploaded successfully!');
+      fetchProducts();
+    } catch (err: any) {
+      console.error(err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingId(null);
+    }
   };
 
   const updatePricingMatrix = (productId: number, newMatrix: any) => {
@@ -90,7 +139,6 @@ export default function ProductsPage() {
     else alert('Product and pricing matrix saved successfully');
   };
 
-  // Latest robust CSV upload (Base Rate + all other tabs)
   const handleCSVUpload = async (file: File) => {
     if (!selectedProduct) {
       alert('Please select a product first');
@@ -156,19 +204,32 @@ export default function ProductsPage() {
       <div className="bg-white rounded-3xl border p-8 mb-12">
         <h2 className="text-2xl font-semibold mb-6">Create New Loan Product</h2>
         <div className="grid grid-cols-2 gap-6">
-          <input type="text" placeholder="Product Name" value={newName} onChange={(e) => setNewName(e.target.value)} className="px-5 py-3 border rounded-2xl w-full" />
-          <input type="text" placeholder="Description" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="px-5 py-3 border rounded-2xl w-full" />
+          <input 
+            type="text" 
+            placeholder="Product Name" 
+            value={newName} 
+            onChange={(e) => setNewName(e.target.value)} 
+            className="px-5 py-3 border rounded-2xl w-full" 
+          />
+          <input 
+            type="text" 
+            placeholder="Description" 
+            value={newDesc} 
+            onChange={(e) => setNewDesc(e.target.value)} 
+            className="px-5 py-3 border rounded-2xl w-full" 
+          />
         </div>
-        <button onClick={createProduct} className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl">Create Product</button>
+        <button onClick={createProduct} className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl">
+          Create Product
+        </button>
       </div>
 
-      {/* Products List with Active/Inactive Toggle */}
       {products.map((product) => {
         const matrix = product.pricing_matrix || {};
 
         return (
           <div key={product.id} className="bg-white border rounded-3xl p-10 mb-12">
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-start mb-8">
               <div className="flex-1">
                 <input 
                   type="text" 
@@ -185,8 +246,27 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {/* Active / Inactive Toggle */}
-              <div className="flex items-center gap-4">
+              {/* Default Profit Setting */}
+              <div className="ml-12 text-right border-l pl-8">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Default Broker Profit</label>
+                <div className="flex items-center gap-2 justify-end">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={product.default_profit_percent ?? 1.0}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setProducts(products.map(p => p.id === product.id ? {...p, default_profit_percent: val} : p));
+                    }}
+                    onBlur={(e) => updateProfit(product.id, parseFloat(e.target.value) || 1.0)}
+                    className="w-28 text-center border rounded-2xl p-3 text-xl font-semibold"
+                  />
+                  <span className="text-2xl">%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">This profit is deducted from base rate for brokers</p>
+              </div>
+
+              <div className="flex items-center gap-4 ml-8">
                 <span className={`px-5 py-2 rounded-2xl text-sm font-medium ${product.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {product.active ? '✅ Active' : '❌ Inactive'}
                 </span>
@@ -202,10 +282,19 @@ export default function ProductsPage() {
             {/* Guidelines Upload */}
             <div className="mb-10">
               <p className="font-medium mb-3">Guidelines PDF</p>
-              {product.guidelines_url && <a href={product.guidelines_url} target="_blank" className="text-blue-600 underline block mb-3">View Current Guidelines</a>}
+              {product.guidelines_url && (
+                <a href={product.guidelines_url} target="_blank" className="text-blue-600 underline block mb-3">
+                  View Current Guidelines
+                </a>
+              )}
               <label className="cursor-pointer block bg-gray-50 border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center hover:border-blue-600">
-                {uploadingId === product.id ? 'Uploading...' : 'Upload / Replace Guidelines PDF'}
-                <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleGuidelinesUpload(product.id.toString(), e.target.files[0])} />
+                {uploadingId === product.id.toString() ? 'Uploading...' : 'Upload / Replace Guidelines PDF'}
+                <input 
+                  type="file" 
+                  accept=".pdf" 
+                  className="hidden" 
+                  onChange={(e) => e.target.files?.[0] && handleGuidelinesUpload(product.id.toString(), e.target.files[0])} 
+                />
               </label>
             </div>
 
@@ -230,7 +319,7 @@ export default function ProductsPage() {
               data={matrix[activeTab] || {}}
               selectedProduct={product}
               updatePricingMatrix={updatePricingMatrix}
-              onSave={(newData) => {
+              onSave={(newData: any) => {
                 const updatedMatrix = { ...matrix, [activeTab]: newData };
                 updatePricingMatrix(product.id, updatedMatrix);
               }}
@@ -243,7 +332,7 @@ export default function ProductsPage() {
   );
 }
 
-// ==================== PricingTableEditor (with Base Rate + Clear Tab) ====================
+// ====================== PricingTableEditor (Unchanged) ======================
 function PricingTableEditor({ 
   tab, 
   data, 
@@ -280,7 +369,6 @@ function PricingTableEditor({
     }
   };
 
-  // Base Rate - 2 column layout
   if (tab === 'Base Rate') {
     return (
       <div>
@@ -325,7 +413,6 @@ function PricingTableEditor({
     );
   }
 
-  // Standard LTV tables
   return (
     <div>
       <div className="flex justify-between mb-4">

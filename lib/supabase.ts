@@ -2,16 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  throw new Error('Missing Supabase public environment variables');
 }
 
-// Public client (for client-side)
+// Public client - safe for browser
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Admin client (for server-side uploads, with service role key)
+// Admin client - only available on server
 export const supabaseAdmin = supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -21,6 +21,7 @@ export const supabaseAdmin = supabaseServiceKey
     })
   : null;
 
-if (!supabaseAdmin) {
-  console.warn('⚠️ SUPABASE_SECRET_KEY is missing - uploads will fail');
+// Only log on server
+if (!supabaseAdmin && typeof window === 'undefined') {
+  console.warn('⚠️ SUPABASE_SECRET_KEY is missing - server uploads will fail');
 }

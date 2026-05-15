@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser, useClerk, OrganizationSwitcher } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import Image from 'next/image';
+import TenantHeader from '@/components/TenantHeader';
+import { useUserRole, UserRole } from '@/lib/user-role';   // ← New
+import NextImage from 'next/image';
 
 const loanStatuses = [
   'Processing', 'Underwriting', 'Clear to Close', 
@@ -15,15 +17,26 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
+  const { role, hasRole } = useUserRole();   // ← New proper role hook
 
   const [activeLoans, setActiveLoans] = useState<any[]>([]);
   const [closedLoans, setClosedLoans] = useState<any[]>([]);
+  const [unassignedLoans, setUnassignedLoans] = useState<any[]>([]);   // ← New
   const [applications, setApplications] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
+  const [activeTab, setActiveTab] = useState<
+    'start' | 'price' | 'applications' | 'inprocess' | 'active' | 'closed' | 'unassigned' | 'users'
+  >('start');
 
-  const [activeTab, setActiveTab] = useState<'start' | 'price' | 'applications' | 'inprocess' | 'active' | 'closed' | 'users'>('start');
+
+  // Modern role checks
+  const isSuperAdmin = hasRole(['SUPER_ADMIN']);
+  const isLendingSupervisor = hasRole(['SUPER_ADMIN', 'LENDING_SUPERVISOR']);
+  const isProcessorOrHigher = hasRole(['SUPER_ADMIN', 'LENDING_SUPERVISOR', 'PROCESSOR']);
+  const isSeniorAE = hasRole(['SENIOR_AE']);
+  const isAE = hasRole(['ACCOUNT_EXECUTIVE']);
+  const isBroker = hasRole(['BROKER_AE']);
 
   // Users management state
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -31,12 +44,6 @@ export default function DashboardPage() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState('');
-
-  const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
-  const isLendingSupervisor = currentUserRole === 'LENDING_SUPERVISOR';
-  const isSeniorAE = currentUserRole === 'SENIOR_AE';
-  const isAE = currentUserRole === 'ACCOUNT_EXECUTIVE';
-  const isBroker = currentUserRole === 'BROKER_AE';
 
   const canAddUser = isSuperAdmin || isSeniorAE || isAE || isBroker;
   const canEditUser = isSuperAdmin || isLendingSupervisor || isSeniorAE;
@@ -65,8 +72,7 @@ export default function DashboardPage() {
         .eq('id', user.id)
         .single();
 
-      const role = userData?.role || 'BROKER_AE';
-      setCurrentUserRole(role);
+
 
       const { data: loansData } = await supabase
         .from('loans')
@@ -104,7 +110,25 @@ export default function DashboardPage() {
 
     loadAllData();
   }, [isLoaded, user, router]);
+  useEffect(() => {
+    if (isProcessorOrHigher) {
+      fetchUnassignedLoans();
+      fetchProcessors();
+    }
+  }, [isProcessorOrHigher]);
 
+  // Fetch Unassigned Loans (for processors and above)
+  const fetchUnassignedLoans = async () => {
+    if (!isProcessorOrHigher) return;
+
+    const { data } = await supabase
+      .from('loans')
+      .select('*')
+      .is('assigned_processor_id', null)
+      .order('created_at', { ascending: false });
+
+    setUnassignedLoans(data || []);
+  };
  const handleLogout = () => {
   signOut({ redirectUrl: '/' });   // Go to home page instead of /sign-in
 };
@@ -185,6 +209,35 @@ export default function DashboardPage() {
       window.location.reload();
     }
   };
+    // Assign a processor to a loan
+  const assignProcessor = async (loanId: number, processorClerkId: string) => {
+    if (!processorClerkId) return;
+
+    const { error } = await supabase
+      .from('loans')
+      .update({ assigned_processor_id: processorClerkId })
+      .eq('id', loanId);
+
+    if (error) {
+      alert('Failed to assign processor: ' + error.message);
+    } else {
+      alert('Processor assigned successfully!');
+      fetchUnassignedLoans(); // Refresh the list
+    }
+  };
+
+  // Fetch list of available processors for dropdown
+  const [processors, setProcessors] = useState<any[]>([]);
+
+  const fetchProcessors = async () => {
+    const { data } = await supabase
+      .from('users')
+      .select('clerk_id, full_name, email, role')
+      .in('role', ['PROCESSOR', 'LENDING_SUPERVISOR', 'SUPER_ADMIN'])
+      .order('full_name');
+
+    setProcessors(data || []);
+  };
 
   if (!isLoaded || loading) return <div className="p-8 text-center">Loading dashboard...</div>;
 
@@ -194,17 +247,17 @@ export default function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto p-8">
       {/* Header with Profile Picture */}
-      <div className="flex justify-between items-center mb-10 border-b pb-6">
-        <div className="flex items-center gap-4">
-          {user?.imageUrl && (
-            <Image 
-              src={user.imageUrl} 
-              alt="Profile" 
-              width={64} 
-              height={64} 
-              className="rounded-full border-2 border-gray-200"
-            />
-          )}
+     <div className="flex justify-between items-center mb-10 border-b pb-6">
+  <div className="flex items-center gap-4">
+    {user?.imageUrl && (
+   <NextImage 
+  src={user.imageUrl} 
+  alt="Profile" 
+  width={64} 
+  height={64} 
+  className="rounded-full border-2 border-gray-200"
+/>
+    )}
           <div>
             <h1 className="text-4xl font-bold">Dashboard</h1>
             <p className="text-gray-600">
@@ -212,7 +265,7 @@ export default function DashboardPage() {
                 {user?.fullName || user?.primaryEmailAddress?.emailAddress || 'User'}
               </span>
             </p>
-            <p className="text-sm text-gray-500">Role: <span className="font-medium">{currentUserRole}</span></p>
+            <p className="text-sm text-gray-500">Role: <span className="font-medium">{role}</span></p>
           </div>
         </div>
 
@@ -224,16 +277,27 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b mb-8 gap-2 flex-wrap">
-        <button onClick={() => setActiveTab('start')} className={`px-8 py-4 font-medium ${activeTab === 'start' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Start New Application</button>
-        <button onClick={() => setActiveTab('price')} className={`px-8 py-4 font-medium ${activeTab === 'price' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Price a Loan</button>
-        <button onClick={() => setActiveTab('applications')} className={`px-8 py-4 font-medium ${activeTab === 'applications' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Applications ({drafts.length})</button>
-        <button onClick={() => setActiveTab('inprocess')} className={`px-8 py-4 font-medium ${activeTab === 'inprocess' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Loans in Process ({inProcess.length})</button>
-        <button onClick={() => setActiveTab('active')} className={`px-8 py-4 font-medium ${activeTab === 'active' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Active Loans ({activeLoans.length})</button>
-        <button onClick={() => setActiveTab('closed')} className={`px-8 py-4 font-medium ${activeTab === 'closed' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Closed Loans ({closedLoans.length})</button>
-        {(isSuperAdmin || isLendingSupervisor || isSeniorAE || isAE || isBroker) && (
-          <button onClick={() => setActiveTab('users')} className={`px-8 py-4 font-medium ${activeTab === 'users' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Users Management</button>
+           {/* Tabs */}
+      <div className="flex border-b mb-8 gap-8 text-lg flex-wrap">
+        {['start', 'price', 'applications', 'inprocess', 'active', 'closed'].map((tab) => (
+          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 font-medium capitalize ${activeTab === tab ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+            {tab}
+          </button>
+        ))}
+
+        {(isProcessorOrHigher) && (
+          <button 
+            onClick={() => { setActiveTab('unassigned'); fetchUnassignedLoans(); }}
+            className={`pb-4 font-medium capitalize ${activeTab === 'unassigned' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500'}`}
+          >
+            Unassigned Loans
+          </button>
+        )}
+
+        {isSuperAdmin && (
+          <button onClick={() => setActiveTab('users')} className={`pb-4 font-medium capitalize ${activeTab === 'users' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+            Users
+          </button>
         )}
       </div>
 
@@ -376,6 +440,45 @@ export default function DashboardPage() {
                     {isSuperAdmin && (
                       <button onClick={() => deleteUser(u.id)} className="text-red-600 hover:text-red-700 px-4 py-1 font-medium">Delete</button>
                     )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+          {/* Unassigned Loans Tab */}
+      {activeTab === 'unassigned' && isProcessorOrHigher && (
+        <div className="bg-white rounded-3xl border overflow-hidden">
+          <div className="p-8 border-b">
+            <h2 className="text-2xl font-semibold">Unassigned Loans</h2>
+            <p className="text-gray-500">These loans need to be assigned to a processor</p>
+          </div>
+
+          <div className="divide-y">
+            {unassignedLoans.length === 0 ? (
+              <p className="p-12 text-center text-gray-500">No unassigned loans at the moment.</p>
+            ) : (
+              unassignedLoans.map((loan) => (
+                <div key={loan.id} className="p-8 flex justify-between items-center hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium">Loan #{loan.id} — {loan.property_address}</p>
+                    <p className="text-sm text-gray-500">{loan.borrower_name}</p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <select 
+                      onChange={(e) => assignProcessor(loan.id, e.target.value)}
+                      className="border border-gray-300 rounded-2xl px-5 py-3 focus:outline-none focus:border-blue-500"
+                      defaultValue=""
+                    >
+                      <option value="">Assign to Processor...</option>
+                      {processors.map((proc) => (
+                        <option key={proc.clerk_id} value={proc.clerk_id}>
+                          {proc.full_name || proc.email} ({proc.role})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               ))

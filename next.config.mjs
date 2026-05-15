@@ -13,9 +13,9 @@ const nextConfig = {
     ],
   },
 
-  // Fix Turbopack + webpack conflict
+  // Force webpack (more stable for your current setup)
   experimental: {
-    turbopack: false,   // Force webpack for now (more stable with your current setup)
+    turbopack: false,
   },
 
   webpack: (config) => {

@@ -4,46 +4,32 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
-
-const documentTypes = [
-  { id: 'drivers_license', label: "Borrower's Driver's License", needsOCR: true },
-  { id: 'credit_report', label: "Borrower's Credit Report" },
-  { id: 'background_check', label: "Borrower's Background Check" },
-  { id: 'bank_statements', label: '2 Months of Bank Statements' },
-  { id: 'purchase_contract', label: 'Purchase Contract (for Purchases)', needsOCR: true },
-  { id: 'previous_closing', label: 'Previous Closing Statement (for Refinances)', needsOCR: true },
-  { id: 'property_insurance', label: 'Property Insurance' },
-  { id: 'title_commitment', label: 'Title Commitment' },
-  { id: 'credit_application', label: 'Borrower Credit Application' },
-  { id: 'appraisal', label: 'Appraisal' },
-  { id: 'signed_term_sheet', label: 'Signed Term Sheet' },
-  { id: 'title_company_info', label: 'Title Company Information' },
-  { id: 'credit_authorization', label: 'Credit Authorization Form' },
-  { id: 'ach_verification', label: 'ACH Verification' },
-  { id: 'articles_of_incorporation', label: 'Articles of Incorporation' },
-  { id: 'operating_agreement', label: 'Company Operating Agreement' },
-  { id: 'ein_letter', label: 'Company EIN Letter' },
-  { id: 'certificate_of_good_standing', label: 'Company Certificate of Good Standing' },
-];
+import TenantHeader from '@/components/TenantHeader';
 
 const loanStatuses = [
   'Processing', 'Underwriting', 'Clear to Close',
   'Closed and Funded', 'On Hold', 'Rejected'
 ];
 
-type DocStatus = 'NEEDED' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
+const documentTypes = [
+  { id: 'drivers_license', label: "Borrower's Driver's License" },
+  { id: 'credit_report', label: "Borrower's Credit Report" },
+  { id: 'bank_statements', label: '2 Months of Bank Statements' },
+  { id: 'appraisal', label: 'Appraisal' },
+  { id: 'property_insurance', label: 'Property Insurance COI' },
+];
 
-interface Document {
+type Document = {
   id?: number;
   loan_id: number;
   doc_type: string;
   file_name?: string;
   file_url?: string;
-  status: DocStatus;
+  status: 'NEEDED' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
   xai_feedback?: string;
   underwriter_notes?: string;
   ae_comments: any[];
-}
+};
 
 export default function LoanDetailPage() {
   const params = useParams();
@@ -56,53 +42,74 @@ export default function LoanDetailPage() {
   const [documents, setDocuments] = useState<Record<string, Document>>({});
   const [loading, setLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'timeline' | 'notes'>('documents');
 
   const isUnderwriterOrHigher = user?.emailAddresses?.[0]?.emailAddress?.toLowerCase().includes('underwriter') ||
                                 user?.emailAddresses?.[0]?.emailAddress?.toLowerCase().includes('superadmin');
 
-  useEffect(() => {
-    async function fetchData() {
-      const { data: loanData } = await supabase
-        .from('loans')
-        .select('*')
-        .eq('id', loanId)
-        .single();
+    useEffect(() => {
+    fetchLoanData();
+  }, [loanId]);
 
-      if (loanData) {
-        setLoan(loanData);
+  async function fetchLoanData() {
+    const { data: loanData } = await supabase
+      .from('loans')
+      .select('*')
+      .eq('id', loanId)
+      .single();
 
-        if (loanData.product_id) {
-          const { data: productData } = await supabase
-            .from('loan_products')
-            .select('id, name, description, guidelines_url')
-            .eq('id', loanData.product_id)
-            .single();
-          setProduct(productData);
-        }
+    if (loanData) {
+      setLoan(loanData);
+
+      if (loanData.product_id) {
+        const { data: productData } = await supabase
+          .from('loan_products')
+          .select('*')
+          .eq('id', loanData.product_id)
+          .single();
+        setProduct(productData);
       }
-
-      const { data: docsData } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('loan_id', loanId);
-
-      const docMap: Record<string, Document> = {};
-      documentTypes.forEach((type) => {
-        const existing = docsData?.find((d: any) => d.doc_type === type.id);
-        docMap[type.id] = existing || {
-          loan_id: loanId,
-          doc_type: type.id,
-          status: 'NEEDED' as DocStatus,
-          ae_comments: [],
-        };
-      });
-
-      setDocuments(docMap);
-      setLoading(false);
     }
 
-    fetchData();
-  }, [loanId]);
+    const requiredDocs = getRequiredDocuments(loanData);
+
+    const { data: docsData } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('loan_id', loanId);
+
+    const docMap: Record<string, Document> = {};
+
+    requiredDocs.forEach((type) => {
+      const existing = docsData?.find((d: any) => d.doc_type === type.id);
+      docMap[type.id] = existing || {
+        loan_id: loanId,
+        doc_type: type.id,
+        status: 'NEEDED',
+        ae_comments: [],
+      };
+    });
+
+    setDocuments(docMap);
+    setLoading(false);
+  }
+
+  function getRequiredDocuments(loan: any) {
+    const base = [...documentTypes];
+
+    if (loan?.loan_purpose?.toLowerCase().includes('purchase')) {
+      return [
+        ...base,
+        { id: 'purchase_contract', label: 'Purchase Contract' },
+      ];
+    } else {
+      return [
+        ...base,
+        { id: 'previous_closing', label: 'Previous Closing HUD' },
+        { id: 'lease_agreements', label: 'Lease Agreements' },
+      ];
+    }
+  }
 
   const updateLoanStatus = async (newStatus: string) => {
     if (!isUnderwriterOrHigher && !['On Hold', 'Rejected'].includes(newStatus)) {
@@ -122,46 +129,45 @@ export default function LoanDetailPage() {
     }
   };
 
-const updateDocument = async (docType: string, updates: Partial<Document>) => {
-  if (!user) return;
+  const updateDocument = async (docType: string, updates: Partial<Document>) => {
+    if (!user) return;
 
-  const current = documents[docType] || {
-    loan_id: loanId,
-    doc_type: docType,
-    status: 'NEEDED' as DocStatus,
-    ae_comments: [],
+    const current = documents[docType] || {
+      loan_id: loanId,
+      doc_type: docType,
+      status: 'NEEDED' as const,
+      ae_comments: [],
+    };
+
+    const payload = {
+      ...current,
+      ...updates,
+      loan_id: loanId,
+      doc_type: docType,
+    };
+
+    // Remove id if it's not a real record yet (for upsert)
+    if (!payload.id) delete payload.id;
+
+    const { error } = await supabase
+      .from('documents')
+      .upsert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update document error:', error);
+      alert('Failed to save document info: ' + error.message);
+      return;
+    }
+
+    // Update local state
+    setDocuments((prev) => ({
+      ...prev,
+      [docType]: { ...payload, id: payload.id || prev[docType]?.id },
+    }));
   };
 
-  // Build payload safely
-  const payload = {
-    ...current,
-    ...updates,
-    loan_id: loanId,
-    doc_type: docType,
-  };
-
-  // Remove id if it's 0 or undefined (for upsert)
-  if (!payload.id || payload.id === 0) {
-    delete payload.id;
-  }
-
-  const { error } = await supabase
-    .from('documents')
-    .upsert(payload)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating document:', error);
-    return;
-  }
-
-  // Refresh the local state (this is the correct way in your file)
-  setDocuments((prev: any) => ({
-    ...prev,
-    [docType]: { ...payload, id: payload.id || prev[docType]?.id },
-  }));
-};
   const handleFileUpload = async (docType: string, file: File) => {
     setUploadingDoc(docType);
 
@@ -180,11 +186,12 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
 
       if (!result.success) throw new Error(result.error || 'Upload failed');
 
+      // Update with xAI feedback if available
       await updateDocument(docType, {
         file_name: file.name,
         file_url: result.fileUrl,
         status: result.status || 'REVIEWING',
-        xai_feedback: result.xaiFeedback,
+        xai_feedback: result.xaiFeedback || '',
         underwriter_notes: result.notes || '',
       });
 
@@ -198,7 +205,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
     }
   };
 
-  const changeStatus = async (docType: string, newStatus: DocStatus) => {
+  const changeStatus = async (docType: string, newStatus: any) => {
     if ((newStatus === 'APPROVED' || newStatus === 'REJECTED') && !isUnderwriterOrHigher) {
       alert("Only Underwriter or higher can approve or reject documents.");
       return;
@@ -214,7 +221,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
     });
   };
 
-  const addComment = async (docType: string, commentText: string) => {
+   const addComment = async (docType: string, commentText: string) => {
     if (!commentText.trim() || !user) return;
 
     const currentComments = documents[docType].ae_comments || [];
@@ -229,183 +236,156 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
     });
   };
 
-  if (loading) return <div className="p-12 text-center">Loading loan details...</div>;
+   if (loading) return <div className="p-12 text-center">Loading loan details...</div>;
   if (!loan) return <div className="p-12 text-center">Loan not found</div>;
 
   return (
     <div className="max-w-6xl mx-auto p-8">
-      <div className="flex justify-between items-start mb-10">
+      <TenantHeader />
+
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Loan #loan_{loan.id}</h1>
-          <p className="text-2xl text-gray-700 mt-2">{loan.property_address}</p>
+          <h1 className="text-4xl font-bold">Loan #{loan.id}</h1>
+          <p className="text-2xl text-gray-700 mt-1">{loan.property_address}</p>
           {loan.borrower_name && <p className="text-gray-600 mt-1">Borrower: {loan.borrower_name}</p>}
         </div>
-        <button 
-          onClick={() => router.push('/dashboard')}
-          className="px-6 py-3 bg-gray-200 hover:bg-gray-300 rounded-xl font-medium"
-        >
-          ← Back to Dashboard
-        </button>
       </div>
 
-      {/* Product Information */}
-      {product && (
-        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-8 mb-10">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">📋 Selected Loan Product</h2>
-          <div className="text-2xl font-medium">{product.name}</div>
-          {product.description && <p className="text-gray-600 mt-1">{product.description}</p>}
-          {product.guidelines_url && (
-            <a 
-              href={product.guidelines_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block mt-4 text-blue-600 hover:underline font-medium"
-            >
-              📄 View Guidelines PDF →
-            </a>
-          )}
+      {/* Tabs */}
+      <div className="flex border-b mb-8 gap-8 text-lg">
+        {['overview', 'documents', 'timeline', 'notes'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={`pb-4 font-medium capitalize border-b-4 transition-all ${
+              activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+       {/* Documents Tab - Compact Table Style */}
+      {activeTab === 'documents' && (
+        <div className="bg-white rounded-3xl border overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="text-left px-8 py-5 font-medium text-gray-600">Document Name</th>
+                <th className="text-left px-8 py-5 font-medium text-gray-600">Type</th>
+                <th className="text-left px-8 py-5 font-medium text-gray-600 w-96">Feedback</th>
+                <th className="px-8 py-5 font-medium text-gray-600">Status</th>
+                <th className="px-8 py-5 font-medium text-gray-600 text-center">File</th>
+                <th className="px-8 py-5 font-medium text-gray-600 text-center">Comments</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {documentTypes.map((doc) => {
+                const currentDoc = documents[doc.id] || { 
+                  status: 'NEEDED', 
+                  file_url: null, 
+                  ae_comments: [],
+                  xai_feedback: '',
+                  underwriter_notes: ''
+                };
+
+                const feedback = currentDoc.xai_feedback || currentDoc.underwriter_notes || "No feedback yet.";
+
+                return (
+                  <tr key={doc.id} className="hover:bg-gray-50 transition">
+                    <td className="px-8 py-6 font-medium">{doc.label}</td>
+                    <td className="px-8 py-6 text-gray-500">Document</td>
+                    
+                    {/* Feedback Column */}
+                    <td className="px-8 py-6 text-sm text-gray-600">
+                      {feedback}
+                      {isUnderwriterOrHigher && (
+                        <button 
+                          onClick={() => {
+                            const note = prompt("Add feedback / notes for this document:");
+                            if (note?.trim()) {
+                              updateDocument(doc.id, { underwriter_notes: note });
+                            }
+                          }}
+                          className="ml-3 text-xs text-blue-600 hover:text-blue-700 underline"
+                        >
+                          + Add Feedback
+                        </button>
+                      )}
+                    </td>
+
+                    <td className="px-8 py-6">
+                      <span className={`inline-block px-4 py-1.5 text-xs font-medium rounded-full ${
+                        currentDoc.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                        currentDoc.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                        currentDoc.status === 'REVIEWING' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {currentDoc.status}
+                      </span>
+                    </td>
+
+                    <td className="px-8 py-6 text-center">
+                      {currentDoc.file_url ? (
+                        <a 
+                          href={currentDoc.file_url} 
+                          target="_blank" 
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          📄 View
+                        </a>
+                      ) : (
+                        <label className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium">
+                          Upload
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => e.target.files?.[0] && handleFileUpload(doc.id, e.target.files[0])}
+                          />
+                        </label>
+                      )}
+                    </td>
+
+                    <td className="px-8 py-6 text-center">
+                      <button 
+                        onClick={() => {
+                          const comment = prompt("Add comment:");
+                          if (comment?.trim()) addComment(doc.id, comment);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 transition"
+                      >
+                        💬 {currentDoc.ae_comments?.length || 0}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* DSCR & Verification Summary */}
-      <div className="bg-white border rounded-3xl p-8 mb-10">
-        <h2 className="text-xl font-semibold mb-4">Key Underwriting Summary</h2>
-        <div className="grid grid-cols-2 gap-6 text-sm">
-          <div><strong>DSCR:</strong> {loan.dscr ? loan.dscr.toFixed(2) : 'Pending'}x</div>
-          <div><strong>Credit Application:</strong> {loan.credit_app_verified ? '✅ Verified' : 'Pending'}</div>
-        </div>
-        {loan.verification_notes && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-2xl text-sm">
-            {loan.verification_notes}
-          </div>
-        )}
-      </div>
-
-      {/* Loan Status */}
-      <div className="mb-12">
-        <label className="block text-sm font-medium mb-3">Loan Status</label>
-        <select
-          value={loan.loan_status || 'Processing'}
-          onChange={(e) => updateLoanStatus(e.target.value)}
-          className="bg-white border border-gray-300 rounded-2xl px-6 py-4 text-lg w-full max-w-md focus:outline-none focus:border-blue-500"
-        >
-          {loanStatuses.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Document Cards */}
-      <div className="grid gap-8">
-        {documentTypes.map((doc) => {
-          const currentDoc = documents[doc.id];
-          return (
-            <div key={doc.id} className="border rounded-3xl p-8 bg-white shadow-sm">
-              <h3 className="text-2xl font-semibold mb-6">{doc.label}</h3>
-
-              <div className="flex flex-wrap gap-3 mb-8">
-                {(['NEEDED', 'REVIEWING', 'APPROVED', 'REJECTED'] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => changeStatus(doc.id, s)}
-                    className={`px-6 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                      currentDoc.status === s ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white border rounded-3xl p-8">
+            <h3 className="font-semibold mb-6">Team Contacts</h3>
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm text-gray-500">Broker</p>
+                <p className="font-medium">John Smith</p>
+                <p className="text-sm text-blue-600">(555) 123-4567</p>
               </div>
-
-              <label className="block cursor-pointer">
-                <div className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all hover:border-blue-500 ${uploadingDoc === doc.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}>
-                  <div className="text-5xl mb-4">📤</div>
-                  <p className="font-semibold text-lg">
-                    {uploadingDoc === doc.id ? 'Uploading & reviewing with xAI...' : 'Click to upload document'}
-                  </p>
-                  <p className="text-gray-500 mt-1">PDF, JPG, PNG supported</p>
-                </div>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(doc.id, e.target.files[0])}
-                />
-              </label>
-
-              {currentDoc.xai_feedback && (
-                <div className="mt-6 p-5 bg-amber-50 border border-amber-200 rounded-2xl">
-                  <strong className="text-amber-700">xAI Review:</strong> {currentDoc.xai_feedback}
-                </div>
-              )}
-
-              {currentDoc.file_url && (
-                <div className="mt-6">
-                  <a
-                    href={currentDoc.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-3 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-medium transition-colors"
-                  >
-                    👁️ View Uploaded Document
-                  </a>
-                </div>
-              )}
-
-              {currentDoc.underwriter_notes && (
-                <div className="mt-6 p-5 bg-blue-50 border border-blue-200 rounded-2xl">
-                  <strong>Underwriter Notes:</strong> {currentDoc.underwriter_notes}
-                </div>
-              )}
-
-              <div className="mt-10">
-                <h4 className="font-medium mb-4">Comments</h4>
-                <div className="max-h-80 overflow-y-auto space-y-4 mb-6">
-                  {(currentDoc.ae_comments || []).length === 0 ? (
-                    <p className="text-gray-500 italic">No comments yet.</p>
-                  ) : (
-                    (currentDoc.ae_comments || []).map((c: any, i: number) => (
-                      <div key={i} className="bg-gray-50 p-5 rounded-2xl text-sm">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <strong>{c.user}</strong>
-                          <span>{new Date(c.timestamp).toLocaleString()}</span>
-                        </div>
-                        <p>{c.comment}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    id={`comment-${doc.id}`}
-                    placeholder="Add a comment or note..."
-                    className="flex-1 px-5 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                        addComment(doc.id, e.currentTarget.value);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      const input = document.getElementById(`comment-${doc.id}`) as HTMLInputElement;
-                      if (input?.value.trim()) {
-                        addComment(doc.id, input.value);
-                        input.value = '';
-                      }
-                    }}
-                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-medium"
-                  >
-                    Send
-                  </button>
-                </div>
+              <div>
+                <p className="text-sm text-gray-500">Processor</p>
+                <p className="font-medium">Sarah Chen</p>
+                <p className="text-sm text-blue-600">sarah@247sparkplug.com</p>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

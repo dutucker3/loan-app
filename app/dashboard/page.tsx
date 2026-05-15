@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser, useClerk, OrganizationSwitcher } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
+import TenantHeader from '@/components/TenantHeader';
 
 const loanStatuses = [
   'Processing', 'Underwriting', 'Clear to Close', 
@@ -105,10 +106,6 @@ export default function DashboardPage() {
     loadAllData();
   }, [isLoaded, user, router]);
 
- const handleLogout = () => {
-  signOut({ redirectUrl: '/' });   // Go to home page instead of /sign-in
-};
-
   const addNewUser = async () => {
     if (!newUserEmail.trim()) return;
     const allowedRoles = getAllowedRoles();
@@ -186,45 +183,41 @@ export default function DashboardPage() {
     }
   };
 
-  if (!isLoaded || loading) return <div className="p-8 text-center">Loading dashboard...</div>;
+   if (!isLoaded || loading) return <div className="p-8 text-center">Loading dashboard...</div>;
 
   const drafts = applications.filter(a => a.status === 'draft');
   const inProcess = applications.filter(a => ['submitted', 'priced', 'in_process'].includes(a.status || ''));
 
   return (
     <div className="max-w-7xl mx-auto p-8">
-      {/* Header with Profile Picture */}
+      {/* ==================== CLEAN WHITE-LABEL HEADER ==================== */}
       <div className="flex justify-between items-center mb-10 border-b pb-6">
-        <div className="flex items-center gap-4">
-          {user?.imageUrl && (
-            <Image 
-              src={user.imageUrl} 
-              alt="Profile" 
-              width={64} 
-              height={64} 
-              className="rounded-full border-2 border-gray-200"
-            />
-          )}
-          <div>
-            <h1 className="text-4xl font-bold">Dashboard</h1>
-            <p className="text-gray-600">
-              Welcome back, <span className="font-medium">
-                {user?.fullName || user?.primaryEmailAddress?.emailAddress || 'User'}
-              </span>
-            </p>
-            <p className="text-sm text-gray-500">Role: <span className="font-medium">{currentUserRole}</span></p>
-          </div>
-        </div>
+        <TenantHeader />
 
-        <button
-          onClick={handleLogout}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-medium transition-colors"
-        >
-          Logout
-        </button>
+        {/* Organization Switcher + Logout */}
+        <div className="flex items-center gap-4">
+          <OrganizationSwitcher 
+            hidePersonal={true}
+            afterCreateOrganizationUrl="/products"
+            afterSelectOrganizationUrl="/products"
+            appearance={{
+              elements: {
+                organizationSwitcherTrigger: 
+                  "px-5 py-2.5 border border-gray-300 rounded-2xl hover:bg-gray-50 text-sm",
+              }
+            }}
+          />
+
+          <button
+            onClick={() => signOut({ redirectUrl: '/' })}
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-medium transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - unchanged */}
       <div className="flex border-b mb-8 gap-2 flex-wrap">
         <button onClick={() => setActiveTab('start')} className={`px-8 py-4 font-medium ${activeTab === 'start' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Start New Application</button>
         <button onClick={() => setActiveTab('price')} className={`px-8 py-4 font-medium ${activeTab === 'price' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Price a Loan</button>
@@ -236,6 +229,10 @@ export default function DashboardPage() {
           <button onClick={() => setActiveTab('users')} className={`px-8 py-4 font-medium ${activeTab === 'users' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}>Users Management</button>
         )}
       </div>
+
+      {/* The rest of your tab content stays exactly the same */}
+
+
 
       {/* Tab Content */}
       {activeTab === 'start' && (

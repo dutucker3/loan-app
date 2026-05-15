@@ -20,6 +20,15 @@ export const supabaseAdmin = supabaseServiceKey
       },
     })
   : null;
+  // Add this function
+export async function getCurrentOrganization(supabase: any, clerkOrgId: string) {
+  const { data } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('clerk_org_id', clerkOrgId)
+    .single();
+  return data;
+}
 
 // Only log on server
 if (!supabaseAdmin && typeof window === 'undefined') {

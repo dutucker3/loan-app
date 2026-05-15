@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { useUser, useOrganization } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useTenant } from '@/lib/tenant-context';   // ← Make sure this file exists
+import { useTenant } from '@/lib/tenant-context';
+import TenantHeader from '@/components/TenantHeader';   // ← Make sure this exists
+import { OrganizationSwitcher } from '@clerk/nextjs';   // ← Add this for the fallback
 
 export default function ProductsPage() {
   const { user } = useUser();
-  const { organization } = useOrganization();
+  const { organization: clerkOrg } = useOrganization();
   const router = useRouter();
-  const tenant = useTenant();
+  const tenant = useTenant(); // Supabase tenant (with logo, color, name)
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,27 +25,70 @@ export default function ProductsPage() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('Base Rate');
 
-  const tabs = [
+    const tabs = [
     'Base Rate', 'DSCR Adjustment', 'Loan Balance Adjustment', 'FICO Adjustment',
     'Property Type Adjustment', 'Loan Structure Adjustment', 'Amortization Adjustment',
     'Prepayment Adjustment', 'Rent Adjustments', 'Other Adjustments', 'Price Ceiling'
   ];
 
   useEffect(() => {
-    if (!organization?.id) {
-      router.push('/dashboard');
+    if (!clerkOrg?.id) {
+      router.push('/select-org');
       return;
     }
-    fetchProducts();
-  }, [organization]);
+
+    if (tenant?.id) {
+      fetchProducts();
+    }
+  }, [clerkOrg?.id, tenant?.id, router]);
+
+  // Protection UI
+  if (!clerkOrg?.id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-10">
+          <h2 className="text-3xl font-bold mb-6">Select an Organization</h2>
+          <p className="mb-8 text-gray-600">
+            You need to select or create an organization to access Products.
+          </p>
+          <OrganizationSwitcher 
+            hidePersonal={true}
+            afterSelectOrganizationUrl="/products"
+            afterCreateOrganizationUrl="/products"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (!tenant) {
+    return <div className="p-10 text-center text-xl">Loading organization info...</div>;
+  }
+
+  if (!tenant?.id) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Organization not found</h2>
+        <p>Please make sure the organization record exists in Supabase.</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-2xl"
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) return <div className="p-10 text-center text-xl">Loading products...</div>;
 
   async function fetchProducts() {
-    if (!organization?.id) return;
+    if (!tenant?.id) return;
 
     const { data, error } = await supabase
       .from('loan_products')
       .select('*')
-      .eq('organization_id', organization.id)
+      .eq('organization_id', tenant.id)
       .order('created_at', { ascending: false });
 
     if (error) console.error(error);
@@ -51,35 +96,39 @@ export default function ProductsPage() {
     setLoading(false);
   }
 
-  const createProduct = async () => {
-    if (!newName.trim() || !organization?.id) return alert('Product name is required');
+ const createProduct = async () => {
+  if (!newName.trim() || !tenant?.id) return alert('Product name is required');
 
-    const { data, error } = await supabase
-      .from('loan_products')
-      .insert({ 
-        name: newName.trim(), 
-        description: newDesc.trim() || null, 
-        pricing_matrix: {},
-        default_profit_percent: 1.0,
-        active: true,
-        organization_id: organization.id
-      })
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('loan_products')
+    .insert({ 
+      name: newName.trim(), 
+      description: newDesc.trim() || null, 
+      pricing_matrix: {},
+      default_profit_percent: 1.0,           // ← Make sure this line exists
+      active: true,
+      organization_id: tenant.id
+    })
+    .select()
+    .single();
 
-    if (error) alert(error.message);
-    else {
-      setProducts([data, ...products]);
-      setNewName('');
-      setNewDesc('');
-    }
-  };
-
-  const toggleActive = async (productId: number, currentActive: boolean) => {
+  if (error) {
+    console.error(error);
+    alert('Error creating product: ' + error.message);
+  } else {
+    setProducts([data, ...products]);
+    setNewName('');
+    setNewDesc('');
+    alert('✅ Product created!');
+  }
+};
+    const toggleActive = async (productId: number, currentActive: boolean) => {
     const { error } = await supabase
       .from('loan_products')
       .update({ active: !currentActive })
-      .eq('id', productId);
+      .eq('id', productId)
+      .eq('organization_id', tenant?.id);
+
     if (error) alert(error.message);
     else fetchProducts();
   };
@@ -88,13 +137,15 @@ export default function ProductsPage() {
     const { error } = await supabase
       .from('loan_products')
       .update({ default_profit_percent: newProfit })
-      .eq('id', productId);
+      .eq('id', productId)
+      .eq('organization_id', tenant?.id);
+
     if (error) alert(error.message);
     else fetchProducts();
   };
 
   const handleGuidelinesUpload = async (productId: string, file: File) => {
-    if (!file) return;
+    if (!file || !tenant?.id) return;
     setUploadingId(productId);
     try {
       const fileExt = file.name.split('.').pop();
@@ -111,7 +162,8 @@ export default function ProductsPage() {
       const { error: updateError } = await supabase
         .from('loan_products')
         .update({ guidelines_url: urlData.publicUrl })
-        .eq('id', parseInt(productId));
+        .eq('id', parseInt(productId))
+        .eq('organization_id', tenant.id);
 
       if (updateError) throw updateError;
 
@@ -129,6 +181,7 @@ export default function ProductsPage() {
   };
 
   const saveProduct = async (product: any) => {
+    if (!tenant?.id) return;
     setSavingId(product.id);
     try {
       const { error } = await supabase
@@ -139,7 +192,8 @@ export default function ProductsPage() {
           pricing_matrix: product.pricing_matrix,
           default_profit_percent: product.default_profit_percent
         })
-        .eq('id', product.id);
+        .eq('id', product.id)
+        .eq('organization_id', tenant.id);
 
       if (error) throw error;
       alert('✅ Product saved successfully!');
@@ -153,7 +207,7 @@ export default function ProductsPage() {
 
   const handleCSVUpload = async (file: File) => {
     const currentProduct = products.find(p => p.id === selectedProductId);
-    if (!currentProduct) {
+    if (!currentProduct || !tenant?.id) {
       alert('Please select a product and click on a tab first');
       return;
     }
@@ -184,7 +238,6 @@ export default function ProductsPage() {
       }
 
       let newData: any = {};
-
       const header = rows[0];
 
       for (let i = 1; i < rows.length; i++) {
@@ -237,7 +290,8 @@ export default function ProductsPage() {
       const { error } = await supabase
         .from('loan_products')
         .update({ pricing_matrix: updatedMatrix })
-        .eq('id', currentProduct.id);
+        .eq('id', currentProduct.id)
+        .eq('organization_id', tenant.id);
 
       if (error) alert('Failed to save: ' + error.message);
       else {
@@ -252,9 +306,16 @@ export default function ProductsPage() {
 
   const deleteProduct = async (productId: number, productName: string) => {
     if (!confirm(`🗑️ Delete product "${productName}"?\n\nThis action cannot be undone.`)) return;
+    if (!tenant?.id) return;
+
     setDeletingId(productId);
     try {
-      const { error } = await supabase.from('loan_products').delete().eq('id', productId);
+      const { error } = await supabase
+        .from('loan_products')
+        .delete()
+        .eq('id', productId)
+        .eq('organization_id', tenant.id);
+
       if (error) throw error;
       alert(`✅ Product "${productName}" deleted.`);
       fetchProducts();
@@ -265,26 +326,76 @@ export default function ProductsPage() {
     }
   };
 
+     if (!clerkOrg?.id) return <div className="p-10 text-center">No active organization</div>;
+  
+  if (!tenant) return <div className="p-10 text-center text-xl">Loading organization info...</div>;
+  
+  if (!tenant?.id) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Organization not found in database</h2>
+        <p>Please make sure the organization record exists in Supabase.</p>
+      </div>
+    );
+  }
+
+    if (!clerkOrg?.id) return <div className="p-10 text-center">No active organization</div>;
+  
+  if (!tenant) return <div className="p-10 text-center text-xl">Loading organization info...</div>;
+  
+  if (!tenant?.id) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Organization not found in database</h2>
+        <p>Please make sure the organization record exists in Supabase.</p>
+      </div>
+    );
+  }
+
+   if (!clerkOrg?.id) return <div className="p-10 text-center">No active organization</div>;
+  
+  if (!tenant) return <div className="p-10 text-center text-xl">Loading organization info...</div>;
+  
+  if (!tenant?.id) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Organization not found in database</h2>
+        <p>Please make sure the organization record exists in Supabase.</p>
+      </div>
+    );
+  }
+
   if (loading) return <div className="p-10 text-center text-xl">Loading products...</div>;
 
-  return (
-    <div className="max-w-7xl mx-auto p-8" style={{ '--primary': tenant?.primary_color || '#000000' } as any}>
-      <div className="flex items-center gap-4 mb-10">
-        {tenant?.logo_url && <img src={tenant.logo_url} alt="Logo" className="h-12 rounded-lg" />}
-        <h1 className="text-4xl font-bold" style={{ color: tenant?.primary_color || '#000' }}>
-          {tenant?.name || 'Loan Products'} Pricing Editor
-        </h1>
-      </div>
+     return (
+    <div className="max-w-7xl mx-auto p-8">
+      {/* White-Label Header */}
+      <TenantHeader />
 
       {/* Create New Product */}
       <div className="bg-white rounded-3xl border p-8 mb-12">
         <h2 className="text-2xl font-semibold mb-6">Create New Loan Product</h2>
         <div className="grid grid-cols-2 gap-6">
-          <input type="text" placeholder="Product Name" value={newName} onChange={(e) => setNewName(e.target.value)} className="px-5 py-3 border rounded-2xl w-full" />
-          <input type="text" placeholder="Description" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="px-5 py-3 border rounded-2xl w-full" />
+          <input 
+            type="text" 
+            placeholder="Product Name" 
+            value={newName} 
+            onChange={(e) => setNewName(e.target.value)} 
+            className="px-5 py-3 border rounded-2xl w-full" 
+          />
+          <input 
+            type="text" 
+            placeholder="Description" 
+            value={newDesc} 
+            onChange={(e) => setNewDesc(e.target.value)} 
+            className="px-5 py-3 border rounded-2xl w-full" 
+          />
         </div>
-        <button onClick={createProduct} className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl">Create Product</button>
+        <button onClick={createProduct} className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl">
+          Create Product
+        </button>
       </div>
+
 
       {products.map((product) => {
         const isSelected = selectedProductId === product.id;

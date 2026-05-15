@@ -13,11 +13,7 @@ const nextConfig = {
     ],
   },
 
-  // Fix Turbopack + webpack conflict
-  experimental: {
-    turbopack: false,   // Force webpack for now (more stable with your current setup)
-  },
-
+  // Keep your webpack fallback (needed for many Supabase/Clerk setups)
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

@@ -1,16 +1,16 @@
-// lib/tenant-context.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization } from '@clerk/nextjs';
 import { supabase } from './supabase';
 
 type Tenant = {
   id: string;
+  clerk_org_id: string;
   name: string;
+  slug?: string;
   logo_url?: string;
   primary_color?: string;
-  slug: string;
   domain?: string;
 };
 
@@ -18,30 +18,36 @@ const TenantContext = createContext<Tenant | null>(null);
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const { organization } = useOrganization();
-  const { user } = useUser();
   const [tenant, setTenant] = useState<Tenant | null>(null);
 
   useEffect(() => {
     const loadTenant = async () => {
-      if (!organization?.id) return;
+      const hostname = window.location.hostname;
 
-      const { data } = await supabase
+      // 1. First try custom domain
+      let { data } = await supabase
         .from('organizations')
         .select('*')
-        .eq('clerk_org_id', organization.id)
-        .single();
+        .eq('domain', hostname)
+        .maybeSingle();
 
-      if (data) setTenant(data);
+      // 2. Fallback to current Clerk organization
+      if (!data && organization?.id) {
+        const { data: clerkData } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('clerk_org_id', organization.id)
+          .maybeSingle();
+        data = clerkData;
+      }
+
+      setTenant(data || null);
     };
 
     loadTenant();
-  }, [organization]);
+  }, [organization?.id]);
 
-  return (
-    <TenantContext.Provider value={tenant}>
-      {children}
-    </TenantContext.Provider>
-  );
+  return <TenantContext.Provider value={tenant}>{children}</TenantContext.Provider>;
 }
 
 export const useTenant = () => useContext(TenantContext);

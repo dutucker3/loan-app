@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
+import { isBorrower } from '@/lib/permissions';
 
 const documentTypes = [
   { id: 'drivers_license', label: "Borrower's Driver's License", needsOCR: true },
@@ -56,12 +57,23 @@ export default function LoanDetailPage() {
   const [documents, setDocuments] = useState<Record<string, Document>>({});
   const [loading, setLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
 
-  const isUnderwriterOrHigher = user?.emailAddresses?.[0]?.emailAddress?.toLowerCase().includes('underwriter') ||
-                                user?.emailAddresses?.[0]?.emailAddress?.toLowerCase().includes('superadmin');
+  const borrowerUser = isBorrower({ id: user?.id || '', role: currentUserRole });
 
   useEffect(() => {
     async function fetchData() {
+      // Load user role
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (userData) setCurrentUserRole(userData.role || 'BROKER_AE');
+      }
+
+      // Load loan
       const { data: loanData } = await supabase
         .from('loans')
         .select('*')
@@ -81,6 +93,7 @@ export default function LoanDetailPage() {
         }
       }
 
+      // Load documents
       const { data: docsData } = await supabase
         .from('documents')
         .select('*')
@@ -102,13 +115,10 @@ export default function LoanDetailPage() {
     }
 
     fetchData();
-  }, [loanId]);
+  }, [loanId, user]);
 
   const updateLoanStatus = async (newStatus: string) => {
-    if (!isUnderwriterOrHigher && !['On Hold', 'Rejected'].includes(newStatus)) {
-      alert("Only Underwriter or higher can change to this status.");
-      return;
-    }
+    if (borrowerUser) return; // Borrowers cannot change status
 
     const { error } = await supabase
       .from('loans')
@@ -122,46 +132,44 @@ export default function LoanDetailPage() {
     }
   };
 
-const updateDocument = async (docType: string, updates: Partial<Document>) => {
-  if (!user) return;
+  const updateDocument = async (docType: string, updates: Partial<Document>) => {
+    if (!user) return;
 
-  const current = documents[docType] || {
-    loan_id: loanId,
-    doc_type: docType,
-    status: 'NEEDED' as DocStatus,
-    ae_comments: [],
+    const current = documents[docType] || {
+      loan_id: loanId,
+      doc_type: docType,
+      status: 'NEEDED' as DocStatus,
+      ae_comments: [],
+    };
+
+    const payload = {
+      ...current,
+      ...updates,
+      loan_id: loanId,
+      doc_type: docType,
+    };
+
+    if (!payload.id || payload.id === 0) {
+      delete payload.id;
+    }
+
+    const { error } = await supabase
+      .from('documents')
+      .upsert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating document:', error);
+      return;
+    }
+
+    setDocuments((prev: any) => ({
+      ...prev,
+      [docType]: { ...payload, id: payload.id || prev[docType]?.id },
+    }));
   };
 
-  // Build payload safely
-  const payload = {
-    ...current,
-    ...updates,
-    loan_id: loanId,
-    doc_type: docType,
-  };
-
-  // Remove id if it's 0 or undefined (for upsert)
-  if (!payload.id || payload.id === 0) {
-    delete payload.id;
-  }
-
-  const { error } = await supabase
-    .from('documents')
-    .upsert(payload)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating document:', error);
-    return;
-  }
-
-  // Refresh the local state (this is the correct way in your file)
-  setDocuments((prev: any) => ({
-    ...prev,
-    [docType]: { ...payload, id: payload.id || prev[docType]?.id },
-  }));
-};
   const handleFileUpload = async (docType: string, file: File) => {
     setUploadingDoc(docType);
 
@@ -199,10 +207,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
   };
 
   const changeStatus = async (docType: string, newStatus: DocStatus) => {
-    if ((newStatus === 'APPROVED' || newStatus === 'REJECTED') && !isUnderwriterOrHigher) {
-      alert("Only Underwriter or higher can approve or reject documents.");
-      return;
-    }
+    if (borrowerUser) return; // Borrowers cannot change status
 
     const notes = newStatus === 'REJECTED' 
       ? prompt("Enter rejection reason (visible to AE):") || "" 
@@ -219,7 +224,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
 
     const currentComments = documents[docType].ae_comments || [];
     const newComment = {
-      user: user.fullName || user.emailAddresses[0]?.emailAddress || 'AE',
+      user: user.fullName || user.emailAddresses?.[0]?.emailAddress || 'User',
       comment: commentText,
       timestamp: new Date().toISOString(),
     };
@@ -229,6 +234,9 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
     });
   };
 
+  // Email integration note (for future)
+  // TODO: Add inbound email webhook in /api/email/inbound/route.ts to process replies and attach documents
+
   if (loading) return <div className="p-12 text-center">Loading loan details...</div>;
   if (!loan) return <div className="p-12 text-center">Loan not found</div>;
 
@@ -236,7 +244,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
     <div className="max-w-6xl mx-auto p-8">
       <div className="flex justify-between items-start mb-10">
         <div>
-          <h1 className="text-4xl font-bold">Loan #loan_{loan.id}</h1>
+          <h1 className="text-4xl font-bold">Loan #{loan.id}</h1>
           <p className="text-2xl text-gray-700 mt-2">{loan.property_address}</p>
           {loan.borrower_name && <p className="text-gray-600 mt-1">Borrower: {loan.borrower_name}</p>}
         </div>
@@ -248,52 +256,36 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
         </button>
       </div>
 
-      {/* Product Information */}
-      {product && (
-        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-8 mb-10">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">📋 Selected Loan Product</h2>
-          <div className="text-2xl font-medium">{product.name}</div>
-          {product.description && <p className="text-gray-600 mt-1">{product.description}</p>}
-          {product.guidelines_url && (
-            <a 
-              href={product.guidelines_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block mt-4 text-blue-600 hover:underline font-medium"
-            >
-              📄 View Guidelines PDF →
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* DSCR & Verification Summary */}
+      {/* Team Contacts Section */}
       <div className="bg-white border rounded-3xl p-8 mb-10">
-        <h2 className="text-xl font-semibold mb-4">Key Underwriting Summary</h2>
-        <div className="grid grid-cols-2 gap-6 text-sm">
-          <div><strong>DSCR:</strong> {loan.dscr ? loan.dscr.toFixed(2) : 'Pending'}x</div>
-          <div><strong>Credit Application:</strong> {loan.credit_app_verified ? '✅ Verified' : 'Pending'}</div>
-        </div>
-        {loan.verification_notes && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-2xl text-sm">
-            {loan.verification_notes}
+        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">👥 Team Contacts</h2>
+        <div className="grid grid-cols-2 gap-8">
+          <div>
+            <p className="text-sm text-gray-500">Broker</p>
+            <p className="font-medium text-lg">{loan.originator_id ? 'Broker Name' : 'Not Assigned'}</p>
           </div>
-        )}
+          <div>
+            <p className="text-sm text-gray-500">Processor</p>
+            <p className="font-medium text-lg">{loan.processor_id ? 'Processor Name' : 'Not Assigned'}</p>
+          </div>
+        </div>
       </div>
 
       {/* Loan Status */}
-      <div className="mb-12">
-        <label className="block text-sm font-medium mb-3">Loan Status</label>
-        <select
-          value={loan.loan_status || 'Processing'}
-          onChange={(e) => updateLoanStatus(e.target.value)}
-          className="bg-white border border-gray-300 rounded-2xl px-6 py-4 text-lg w-full max-w-md focus:outline-none focus:border-blue-500"
-        >
-          {loanStatuses.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-      </div>
+      {!borrowerUser && (
+        <div className="mb-12">
+          <label className="block text-sm font-medium mb-3">Loan Status</label>
+          <select
+            value={loan.loan_status || 'Processing'}
+            onChange={(e) => updateLoanStatus(e.target.value)}
+            className="bg-white border border-gray-300 rounded-2xl px-6 py-4 text-lg w-full max-w-md focus:outline-none focus:border-blue-500"
+          >
+            {loanStatuses.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Document Cards */}
       <div className="grid gap-8">
@@ -307,10 +299,10 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
                 {(['NEEDED', 'REVIEWING', 'APPROVED', 'REJECTED'] as const).map((s) => (
                   <button
                     key={s}
-                    onClick={() => changeStatus(doc.id, s)}
+                    onClick={() => !borrowerUser && changeStatus(doc.id, s)}
                     className={`px-6 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                       currentDoc.status === s ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
+                    } ${borrowerUser ? 'cursor-default opacity-60' : ''}`}
                   >
                     {s}
                   </button>
@@ -351,7 +343,7 @@ const updateDocument = async (docType: string, updates: Partial<Document>) => {
                 </div>
               )}
 
-              {currentDoc.underwriter_notes && (
+              {currentDoc.underwriter_notes && !borrowerUser && (
                 <div className="mt-6 p-5 bg-blue-50 border border-blue-200 rounded-2xl">
                   <strong>Underwriter Notes:</strong> {currentDoc.underwriter_notes}
                 </div>

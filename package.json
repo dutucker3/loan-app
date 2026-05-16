@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.7",
@@ -14,6 +14,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.100.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.4.2",
     "html2pdf.js": "^0.14.0",
     "lucide-react": "^1.7.0",
     "pdf-parse": "^2.4.5",
@@ -23,6 +24,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "resend": "^6.12.3",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
@@ -31,6 +33,7 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "cross-env": "^10.1.0",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "prisma": "^7.6.0",

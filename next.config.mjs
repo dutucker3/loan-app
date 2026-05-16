@@ -13,7 +13,7 @@ const nextConfig = {
     ],
   },
 
-  // Force webpack (more stable for your current setup)
+  // Force webpack (more stable for your current setup) + webpack fallback for Supabase/Clerk
   experimental: {
     turbopack: false,
   },

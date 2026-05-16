@@ -1,27 +1,16 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+// app/layout.tsx (updated)
 import { ClerkProvider } from "@clerk/nextjs";
+import { TenantProvider } from "@/lib/tenant-context";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Loan Processing App",
-  description: "Mortgage Loan Processor with xAI",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>
-          {children}
-        </body>
-      </html>
+      <TenantProvider>
+        <html lang="en">
+          <body>{children}</body>
+        </html>
+      </TenantProvider>
     </ClerkProvider>
   );
 }

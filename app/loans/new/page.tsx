@@ -5,10 +5,13 @@ import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { LoanApplicationPDF } from '@/components/LoanApplicationPDF';
+import { useUser } from '@clerk/nextjs';
+import { isBorrower } from '@/lib/permissions';
 
 function NewLoanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useUser();
   const appId = searchParams.get('id');
 
   const [application, setApplication] = useState<any>(null);
@@ -19,6 +22,12 @@ function NewLoanContent() {
   const [loanAmount, setLoanAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // New: User role and organization for pricing
+  const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
+  const [organization, setOrganization] = useState<any>(null);
+
+  const isBorrowerUser = isBorrower({ id: user?.id || '', role: currentUserRole });
 
   // Pricing controls
   const [propertyType, setPropertyType] = useState<string>('SFR');
@@ -39,6 +48,33 @@ function NewLoanContent() {
       setSupabase(client);
     });
   }, []);
+
+  // Load user role + organization markup
+  useEffect(() => {
+    if (!user || !supabase) return;
+
+    const loadUserAndOrg = async () => {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role, organization_id')
+        .eq('id', user.id)
+        .single();
+
+      const role = userData?.role || 'BROKER_AE';
+      setCurrentUserRole(role);
+
+      if (userData?.organization_id) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('wholesale_markup, retail_markup, name')
+          .eq('id', userData.organization_id)
+          .single();
+        setOrganization(org);
+      }
+    };
+
+    loadUserAndOrg();
+  }, [user, supabase]);
 
   useEffect(() => {
     if (!appId || !supabase) return;
@@ -69,7 +105,6 @@ function NewLoanContent() {
 
         setProducts(prods || []);
 
-        // Auto-select first product
         if (prods && prods.length > 0) {
           setSelectedProduct(prods[0]);
         }
@@ -84,7 +119,31 @@ function NewLoanContent() {
     loadData();
   }, [appId, supabase]);
 
-  // Calculations
+  // ====================== MARKUP + RETAIL LOGIC ======================
+  const getMarkup = () => {
+    if (!organization) return 0;
+    return isBorrowerUser 
+      ? (organization.retail_markup || 0) 
+      : (organization.wholesale_markup || 0);
+  };
+
+  const getFinalPrice = (basePrice: number | null): number | null => {
+    if (basePrice === null) return null;
+    let final = basePrice + getMarkup();
+
+    if (isBorrowerUser) {
+      final = Math.min(final, 100.00); // Retail cap
+    }
+
+    if (final > 103.00) return null;
+    if (final >= 102.01) final = 102.00;
+    if (final < 96.00) return null;
+    if (final >= 96.00 && final < 97.00) final = 97.00;
+
+    return Math.floor(final * 100) / 100;
+  };
+
+  // ====================== YOUR ORIGINAL HELPERS (kept fully intact) ======================
   const purchasePrice = parseFloat((form.estimatedValue || '0').replace(/,/g, '')) || 0;
   const requestedLTV = parseFloat(form.ltv || '0');
   const annualRent = parseFloat((form.rentalIncome || '0').replace(/,/g, '')) || 0;
@@ -109,8 +168,6 @@ function NewLoanContent() {
   const interestRates = Array.from({ length: 57 }, (_, i) => parseFloat((5.0 + i * 0.125).toFixed(3)));
   const ltvBuckets = [50, 55, 60, 65, 70, 75, 80];
 
-
-   // ====================== UPDATED BUCKET HELPERS ======================
   const getLtvBucket = (ltv: number): string => {
     if (ltv <= 50) return '<=50';
     if (ltv <= 55) return '50.01-55';
@@ -133,12 +190,10 @@ function NewLoanContent() {
   };
 
   const getDscrBucket = (dscr: number, fico: number, isPurchase: boolean = true): string => {
-    // More specific matching for your complex CSV rows
     if (dscr >= 1.25) return '>=1.25x';
     if (dscr >= 1.15) return '>=1.15x and <1.25x';
     if (dscr >= 1.00) return '>=1.00x and <1.15x';
     
-    // Lower DSCR with FICO/Purpose conditions
     if (dscr >= 0.95 && fico >= 720) {
       return isPurchase ? '0.95-0.99x (Purch, 720+ FICO)' : '0.95-0.99x (Refi, 720+ FICO)';
     }
@@ -151,7 +206,8 @@ function NewLoanContent() {
     
     return '<0.75x';
   };
-    const getLoanSizeBucket = (amount: number): string => {
+
+  const getLoanSizeBucket = (amount: number): string => {
     if (amount <= 125000) return '100001-125000';
     if (amount <= 150000) return '125001-150000';
     if (amount <= 250000) return '150001-250000';
@@ -167,7 +223,6 @@ function NewLoanContent() {
     return '3500001+';
   };
 
-  // ====================== STRICT 97-102 CLAMPING ======================
   const getBrokerPrice = (rate: number, ltv: number): number | null => {
     if (!selectedProduct?.pricing_matrix) return null;
 
@@ -180,11 +235,11 @@ function NewLoanContent() {
       console.error("Parse error:", e);
       return null;
     }
-    // 1. Base Rate - Most Flexible Lookup (for both products)
+
     const baseMatrix = matrix['baseRates'] || matrix['Base Rate'] || {};
     
-    const baseKey3 = rate.toFixed(3);      // e.g. "6.625"
-    const baseKey4 = rate.toFixed(4);      // e.g. "6.6250"
+    const baseKey3 = rate.toFixed(3);
+    const baseKey4 = rate.toFixed(4);
     const baseKeyRaw = rate.toString();
 
     let basePriceStr = 
@@ -204,143 +259,29 @@ function NewLoanContent() {
     const ltvKey = getLtvBucket(ltv);
     const fico = parseFloat(application?.borrowers?.[0]?.fico || '720');
     const dscr = calculateDSCR(rate, ltv);
-    const isPurchase = true; // TODO: Make this dynamic later based on loan purpose
+    const isPurchase = true;
 
-    // 2. FICO
     const ficoMatrix = matrix['ficoLtvGrid'] || matrix['FICO Adjustment'] || {};
     const ficoBucket = getFicoBucket(fico);
     price += parseFloat(ficoMatrix[ficoBucket]?.[ltvKey] || '0') || 0;
 
-    // 3. DSCR
     const dscrMatrix = matrix['dscrLtvGrid'] || matrix['DSCR Adjustment'] || {};
     const dscrBucket = getDscrBucket(dscr, fico, isPurchase);
     price += parseFloat(dscrMatrix[dscrBucket]?.[ltvKey] || dscrMatrix[dscrBucket] || '0') || 0;
 
-    // 4. Loan Size
     const loanSizeMatrix = matrix['loanBalanceLtvGrid'] || {};
     const loanSizeBucket = getLoanSizeBucket(loanAmount);
     price += parseFloat(loanSizeMatrix[loanSizeBucket]?.[ltvKey] || loanSizeMatrix[loanSizeBucket]?.all || '0') || 0;
 
-    // 5. Profit Margin
     const profitPercent = selectedProduct.default_profit_percent || 1.0;
     price += profitPercent;
 
-    // ====================== YOUR EXACT CLAMPING RULE ======================
-    let finalPrice = price;
-
-    if (finalPrice > 103.00) {
-      return null;                    // > 103.00 = Ineligible
-    } 
-    else if (finalPrice >= 102.01) {
-      finalPrice = 102.00;            // 102.01 - 103.00 → 102.00
-    } 
-    else if (finalPrice < 96.00) {
-      return null;                    // < 96.00 = Ineligible
-    } 
-    else if (finalPrice >= 96.00 && finalPrice < 97.00) {
-      finalPrice = 97.00;             // 96.00 - 96.99 → 97.00
-    }
-
-    finalPrice = Math.floor(finalPrice * 100) / 100;   // Ensure 2 decimals
-
-    return finalPrice;
-  };
-    // ====================== DEBUG HELPERS ======================
-  const getBaseRateDebug = (rate: number) => {
-    let matrix;
-    try {
-      matrix = typeof selectedProduct?.pricing_matrix === 'string' 
-        ? JSON.parse(selectedProduct.pricing_matrix) 
-        : selectedProduct?.pricing_matrix || {};
-    } catch {
-      matrix = {};
-    }
-    
-    const baseMatrix = matrix['baseRates'] || matrix['Base Rate'] || {};
-    const baseKey3 = rate.toFixed(3);
-    const baseKey4 = rate.toFixed(4);
-    
-    return baseMatrix[baseKey4] || baseMatrix[baseKey3] || 
-           baseMatrix[rate.toString()] || baseMatrix[rate] || 'Not Found';
+    return price;
   };
 
-  const getFicoAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const ficoMatrix = matrix['FICO Adjustment'] || {};
-    const ficoBucket = getFicoBucket(parseFloat(application?.borrowers?.[0]?.fico || 720));
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(ficoMatrix[ficoBucket]?.[ltvBucket] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getDscrAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const dscrMatrix = matrix['DSCR Adjustment'] || {};
-    const dscrBucket = getDscrBucket(calculateDSCR(rate, ltv));
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(dscrMatrix[dscrBucket]?.[ltvBucket] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getLoanSizeAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const lsMatrix = matrix['Loan Size'] || matrix['Loan Balance Adjustment'] || {};
-    const lsBucket = getLoanSizeBucket(loanAmount);
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(lsMatrix[lsBucket]?.[ltvBucket] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getPropAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const propMatrix = matrix['Property Type Adjustment'] || {};
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(propMatrix[propertyType]?.[ltvBucket] || propMatrix[propertyType] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getAmortAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const amortMatrix = matrix['Amortization Adjustment'] || {};
-    const amortType = interestOnly ? 'Partial-IO (10 Years)*' : 'Fully Amortizing';
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(amortMatrix[amortType]?.[ltvBucket] || amortMatrix[amortType] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getPrepayAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const prepayMatrix = matrix['Prepayment Adjustment'] || matrix['Prepayment Penalty'] || {};
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(prepayMatrix[prepaymentPenalty]?.[ltvBucket] || prepayMatrix[prepaymentPenalty] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-  const getLtvAdjustmentDebug = (rate: number, ltv: number) => {
-    let matrix: any = {};
-    try {
-      matrix = typeof selectedProduct?.pricing_matrix === 'string' 
-        ? JSON.parse(selectedProduct.pricing_matrix) 
-        : selectedProduct?.pricing_matrix || {};
-    } catch { matrix = {}; }
-
-    const ltvMatrix = matrix['ltvAdjustments'] || {};
-    const ltvKey = ltv.toString();           // e.g. "70"
-    const adj = parseFloat(ltvMatrix[ltvKey] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  const getRentAdjustmentDebug = (rate: number, ltv: number) => {
-    const matrix = selectedProduct?.pricing_matrix || {};
-    const rentMatrix = matrix['Rent Adjustments'] || matrix['Rent Qualification'] || {};
-    const ltvBucket = getLtvBucket(ltv);
-    const adj = parseFloat(rentMatrix[rentQualification]?.[ltvBucket] || rentMatrix[rentQualification] || '0');
-    return adj >= 0 ? `+${adj.toFixed(2)}` : adj.toFixed(2);
-  };
-
-  // Keep your existing calculateDSCR (or improve it if you want more precision)
-   const calculateDSCR = (rate: number, ltv: number) => {
+  const calculateDSCR = (rate: number, ltv: number) => {
     const purchasePriceNum = purchasePrice || 500000;
-    const loanForThisCell = purchasePriceNum * (ltv / 100);   // Dynamic loan amount
+    const loanForThisCell = purchasePriceNum * (ltv / 100);
 
     const monthlyRate = rate / 100 / 12;
     const numPayments = 360;
@@ -352,9 +293,28 @@ function NewLoanContent() {
     return annualRent / (annualDebtService + annualExpense) || 1.0;
   };
 
+  const getPrice = (rate: number, ltv: number): number | null => {
+    const basePrice = getBrokerPrice(rate, ltv);
+    return getFinalPrice(basePrice);
+  };
+
+  const getDisplayValue = (rate: number, ltv: number) => {
+    const price = getPrice(rate, ltv);
+    if (price === null) return 'Ineligible';
+
+    if (isBorrowerUser) {
+      const feePercent = Math.max(0, 100 - price);
+      return `${feePercent.toFixed(2)}% Orig Fee`;
+    }
+    return price.toFixed(2);
+  };
+
   const handleCellClick = (rate: number, ltv: number) => {
-    setSelectedRate(rate.toFixed(3));
-    setSelectedLTV(ltv);
+    const price = getPrice(rate, ltv);
+    if (price !== null) {
+      setSelectedRate(rate.toFixed(3));
+      setSelectedLTV(ltv);
+    }
   };
 
   const dscr = calculateDSCR(parseFloat(selectedRate) || 6, selectedLTV);
@@ -374,16 +334,17 @@ function NewLoanContent() {
         </button>
 
         <h1 className="text-4xl font-bold text-center flex-1">
-          Pricing Matrix – {form.propertyAddress || 'New Loan'}
+          {isBorrowerUser ? 'Retail Pricing Matrix' : 'Wholesale Pricing Matrix'} – {form.propertyAddress || 'New Loan'}
         </h1>
 
         <PDFDownloadLink
           document={
             <LoanApplicationPDF 
-              form={form}
-              borrowers={borrowers}
-              rentRoll={rentRoll}
-              owners={owners}
+             form={form}
+      borrowers={borrowers}
+      rentRoll={rentRoll}
+      owners={owners}
+      organization={organization}   // ← Add this line
             />
           }
           fileName={`Loan-Application-${form.propertyAddress || 'Untitled'}.pdf`}
@@ -394,6 +355,13 @@ function NewLoanContent() {
             </button>
           )}
         </PDFDownloadLink>
+      </div>
+
+      {/* Pricing Mode Banner */}
+      <div className={`mb-8 p-4 rounded-2xl text-center font-medium ${isBorrowerUser ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+        {isBorrowerUser 
+          ? '📌 You are viewing RETAIL rates • Origination Fee shown (max rate 100.00)' 
+          : '📌 You are viewing WHOLESALE rates'}
       </div>
 
       {/* Top Summary Grid */}
@@ -479,7 +447,7 @@ function NewLoanContent() {
         </div>
       </div>
 
-            {/* Product Selector */}
+      {/* Product Selector */}
       <div className="mb-8 bg-white border rounded-3xl p-8">
         <label className="block text-sm font-medium mb-3 text-lg">Select Loan Product</label>
         <select 
@@ -489,9 +457,7 @@ function NewLoanContent() {
               setSelectedProduct(null);
               return;
             }
-            const productId = Number(value); // More reliable than parseInt
-            const product = products.find(p => p.id === productId || String(p.id) === value);
-            console.log('Selected product:', product); // ← Debug
+            const product = products.find(p => String(p.id) === value);
             setSelectedProduct(product || null);
             setSelectedRate('');
             setSelectedLTV(0);
@@ -505,10 +471,6 @@ function NewLoanContent() {
             </option>
           ))}
         </select>
-
-        {products.length === 0 && (
-          <p className="text-amber-600 mt-4">No loan products found. Go to /products and create some.</p>
-        )}
       </div>
 
       {/* Pricing Grid */}
@@ -518,7 +480,7 @@ function NewLoanContent() {
             {selectedProduct.name} Pricing Grid
           </h2>
 
-                                     <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-gray-100">
                 <th className="border p-4 text-left font-semibold">Interest Rate</th>
@@ -529,47 +491,37 @@ function NewLoanContent() {
             </thead>
             <tbody>
               {interestRates
-                .filter(rate => {
-                  // Only show rates that have AT LEAST ONE valid cell (97-102)
-                  return ltvBuckets.some(ltv => {
-                    const price = getBrokerPrice(rate, ltv);
-                    const dscrCalc = calculateDSCR(rate, ltv);
-                    return price !== null && price >= 97 && price <= 102 && dscrCalc >= 1.00;
-                  });
-                })
+                .filter(rate => ltvBuckets.some(ltv => getPrice(rate, ltv) !== null))
                 .map((rate) => {
-                  const rowPrices = ltvBuckets.map(ltv => getBrokerPrice(rate, ltv));
-                  const hasAnyValid = rowPrices.some(p => p !== null && p >= 97 && p <= 102);
+                  const rowPrices = ltvBuckets.map(ltv => getPrice(rate, ltv));
+                  const hasAnyValid = rowPrices.some(p => p !== null);
 
                   return (
                     <tr key={rate}>
                       <td className="border p-4 font-medium bg-gray-50">{rate.toFixed(3)}%</td>
                       {ltvBuckets.map((ltv) => {
-  const price = getBrokerPrice(rate, ltv);           // Use the function directly
-  const dscrCalc = calculateDSCR(rate, ltv);
+                        const price = getPrice(rate, ltv);
+                        const dscrCalc = calculateDSCR(rate, ltv);
+                        const isEligible = price !== null && dscrCalc >= 1.00;
+                        const isSelected = selectedRate === rate.toFixed(3) && selectedLTV === ltv;
 
-  // Use the clamped value returned by getBrokerPrice
-  const isEligible = price !== null && dscrCalc >= 1.00;
-
-  const isSelected = selectedRate === rate.toFixed(3) && selectedLTV === ltv;
-
-  return (
-    <td
-      key={ltv}
-      onClick={() => isEligible && handleCellClick(rate, ltv)}
-      className={`border p-4 text-center cursor-pointer hover:bg-blue-50 transition-colors ${
-        isSelected ? 'bg-blue-100 ring-2 ring-blue-500' : ''
-      } ${!isEligible ? 'bg-red-50' : ''}`}
-    >
-      {isEligible && price !== null ? (
-        <>
-          <div className="font-bold text-lg">{price.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">{dscrCalc.toFixed(2)}x DSCR</div>
-        </>
-      ) : (
-        <div className="text-red-600 text-xs font-medium">Ineligible</div>
-      )}
-    </td>
+                        return (
+                          <td
+                            key={ltv}
+                            onClick={() => isEligible && handleCellClick(rate, ltv)}
+                            className={`border p-4 text-center cursor-pointer hover:bg-blue-50 transition-colors ${
+                              isSelected ? 'bg-blue-100 ring-2 ring-blue-500' : ''
+                            } ${!isEligible ? 'bg-red-50' : ''}`}
+                          >
+                            {isEligible && price !== null ? (
+                              <>
+                                <div className="font-bold text-lg">{getDisplayValue(rate, ltv)}</div>
+                                <div className="text-xs text-gray-500">{dscrCalc.toFixed(2)}x DSCR</div>
+                              </>
+                            ) : (
+                              <div className="text-red-600 text-xs font-medium">Ineligible</div>
+                            )}
+                          </td>
                         );
                       })}
                     </tr>
@@ -578,59 +530,17 @@ function NewLoanContent() {
             </tbody>
           </table>
 
-              
-                   {/* ====================== UPDATED DEBUG PANEL ====================== */}
-          {selectedRate && (
-            <div className="mt-8 p-6 bg-gray-100 border border-gray-300 rounded-3xl">
-              <h3 className="font-bold text-lg mb-4">🔍 Debug: {selectedRate}% @ {selectedLTV}% LTV</h3>
-              
-              <div className="bg-white rounded-2xl p-5 space-y-3 text-sm">
-                <div><strong>Base Rate:</strong> {getBaseRateDebug(parseFloat(selectedRate))}</div>
-                
-                <div className="pt-3 border-t font-medium">Adjustments Applied:</div>
-                
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
-                  <div>FICO ({getFicoBucket(parseFloat(application?.borrowers?.[0]?.fico || 720))}):</div>
-                  <div>{getFicoAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>DSCR ({calculateDSCR(parseFloat(selectedRate), selectedLTV).toFixed(2)}x):</div>
-                  <div>{getDscrAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div><strong>LTV Adjustment:</strong></div>
-                  <div>{getLtvAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>Loan Size ({getLoanSizeBucket(loanAmount)}):</div>
-                  <div>{getLoanSizeAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>Property Type ({propertyType}):</div>
-                  <div>{getPropAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>Amortization:</div>
-                  <div>{getAmortAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>Prepayment Penalty:</div>
-                  <div>{getPrepayAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div>Rent Qualification:</div>
-                  <div>{getRentAdjustmentDebug(parseFloat(selectedRate), selectedLTV)}</div>
-
-                  <div><strong>Default Profit Margin:</strong></div>
-                  <div>+{(selectedProduct?.default_profit_percent || 1.0).toFixed(2)}</div>
-                </div>
-
-                <div className="pt-4 border-t font-bold text-lg">
-                  Final Price: {getBrokerPrice(parseFloat(selectedRate), selectedLTV) || 'Ineligible'}
-                </div>
-              </div>
-            </div>
-          )}
-
+          {/* Selected Rate Summary */}
           {selectedRate && (
             <div className="mt-8 p-6 bg-black text-white rounded-3xl flex justify-between items-center">
               <div>
                 <span className="text-sm opacity-70">Selected:</span>
                 <span className="ml-3 text-3xl font-bold">{selectedRate}% @ {selectedLTV}% LTV</span>
-                <span className="ml-6 text-sm opacity-70">DSCR: {dscr.toFixed(2)}x</span>
+                <span className="ml-6 text-sm opacity-70">
+                  {isBorrowerUser 
+                    ? `${(100 - (getPrice(parseFloat(selectedRate), selectedLTV) || 100)).toFixed(2)}% Origination Fee` 
+                    : `${getPrice(parseFloat(selectedRate), selectedLTV)} Price`}
+                </span>
               </div>
               <button 
                 onClick={() => alert('Term Sheet coming soon!')} 

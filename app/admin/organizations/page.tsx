@@ -11,6 +11,10 @@ type Organization = {
   logo_url?: string;
   primary_color?: string;
   domain?: string;
+  from_email?: string;
+  support_email?: string;
+  reply_to_email?: string;
+  custom_domain_verified?: boolean;
   created_at: string;
 };
 
@@ -59,32 +63,27 @@ export default function OrganizationsPage() {
       setUploading(false);
     }
   };
+
   const saveWhiteLabel = async () => {
     if (!editingOrg) return;
 
-    console.log("🔍 Attempting to update org with ID:", editingOrg.id);
-    console.log("Full editingOrg object:", editingOrg);
-
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('organizations')
       .update({
         logo_url: editingOrg.logo_url,
         primary_color: editingOrg.primary_color,
         domain: editingOrg.domain,
+        from_email: editingOrg.from_email,
+        support_email: editingOrg.support_email,
+        reply_to_email: editingOrg.reply_to_email,
       })
-      .eq('id', editingOrg.id)
-      .select();   // This returns the updated row(s)
+      .eq('id', editingOrg.id);
 
     if (error) {
       console.error("❌ Update error:", error);
       alert('Save failed: ' + error.message);
     } else {
-      console.log("✅ Update response:", data);
-      if (data && data.length > 0) {
-        alert('✅ Successfully saved!');
-      } else {
-        alert('⚠️ No rows updated. The ID might be incorrect.');
-      }
+      alert('✅ White-label settings saved successfully!');
       setEditingOrg(null);
       fetchOrganizations();
     }
@@ -93,8 +92,8 @@ export default function OrganizationsPage() {
   if (loading) return <div className="p-10 text-center">Loading organizations...</div>;
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Manage Organizations</h1>
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-8">Manage Organizations (White Label)</h1>
 
       <div className="bg-white rounded-3xl border divide-y">
         {orgs.map((org) => (
@@ -103,7 +102,9 @@ export default function OrganizationsPage() {
               {org.logo_url && <img src={org.logo_url} alt="logo" className="h-12 w-12 object-contain" />}
               <div>
                 <h3 className="text-xl font-semibold">{org.name}</h3>
-                <p className="text-sm text-gray-500">ID: {org.id}</p>
+                <p className="text-sm text-gray-500">
+                  Domain: {org.domain || '—'} | From: {org.from_email || '—'}
+                </p>
               </div>
             </div>
 
@@ -120,16 +121,17 @@ export default function OrganizationsPage() {
       {/* Edit Modal */}
       {editingOrg && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-10 w-full max-w-lg">
+          <div className="bg-white rounded-3xl p-10 w-full max-w-lg max-h-[90vh] overflow-auto">
             <h2 className="text-2xl font-bold mb-6">White Label — {editingOrg.name}</h2>
-            <p className="text-xs text-red-500 mb-4">Debug ID: {editingOrg.id}</p>
 
             <div className="space-y-8">
               {/* Logo Upload */}
               <div>
                 <label className="block text-sm font-medium mb-3">Logo</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center">
-                  {editingOrg.logo_url && <img src={editingOrg.logo_url} alt="preview" className="mx-auto max-h-28 mb-4" />}
+                  {editingOrg.logo_url && (
+                    <img src={editingOrg.logo_url} alt="preview" className="mx-auto max-h-28 mb-4" />
+                  )}
                   <input
                     type="file"
                     accept="image/*"
@@ -143,7 +145,7 @@ export default function OrganizationsPage() {
                 </div>
               </div>
 
-              {/* Color */}
+              {/* Primary Color */}
               <div>
                 <label className="block text-sm font-medium mb-2">Primary Color</label>
                 <input
@@ -154,7 +156,7 @@ export default function OrganizationsPage() {
                 />
               </div>
 
-              {/* Domain */}
+              {/* Custom Domain */}
               <div>
                 <label className="block text-sm font-medium mb-2">Custom Domain</label>
                 <input
@@ -162,8 +164,49 @@ export default function OrganizationsPage() {
                   value={editingOrg.domain || ''}
                   onChange={(e) => setEditingOrg({ ...editingOrg, domain: e.target.value })}
                   className="w-full px-5 py-4 border rounded-2xl"
-                  placeholder="lending.yourcompany.com"
+                  placeholder="loans.abc-capital.com"
                 />
+                <p className="text-xs text-gray-500 mt-1">Used for white-labeled links and emails</p>
+              </div>
+
+              {/* Email Settings */}
+              <div className="pt-4 border-t">
+                <h3 className="font-semibold mb-4">Email Settings (Postmark)</h3>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">From Email (Sender)</label>
+                    <input
+                      type="email"
+                      value={editingOrg.from_email || ''}
+                      onChange={(e) => setEditingOrg({ ...editingOrg, from_email: e.target.value })}
+                      className="w-full px-5 py-4 border rounded-2xl"
+                      placeholder="noreply@abc-capital.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Support Email</label>
+                    <input
+                      type="email"
+                      value={editingOrg.support_email || ''}
+                      onChange={(e) => setEditingOrg({ ...editingOrg, support_email: e.target.value })}
+                      className="w-full px-5 py-4 border rounded-2xl"
+                      placeholder="support@abc-capital.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Reply-To Email</label>
+                    <input
+                      type="email"
+                      value={editingOrg.reply_to_email || ''}
+                      onChange={(e) => setEditingOrg({ ...editingOrg, reply_to_email: e.target.value })}
+                      className="w-full px-5 py-4 border rounded-2xl"
+                      placeholder="loans@abc-capital.com"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -172,7 +215,7 @@ export default function OrganizationsPage() {
                 onClick={saveWhiteLabel}
                 className="flex-1 py-4 bg-green-600 text-white rounded-2xl font-semibold hover:bg-green-700"
               >
-                Save Changes
+                Save White Label Settings
               </button>
               <button
                 onClick={() => setEditingOrg(null)}

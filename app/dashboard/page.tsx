@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import TenantHeader from '@/components/TenantHeader';
 import NextImage from 'next/image';
 import { hasPermission } from '@/lib/permissions';
-import { Role } from '@prisma/client';
 
 const loanStatuses = [
   'Processing', 'Underwriting', 'Clear to Close', 
@@ -18,7 +17,6 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
-  const { role, hasRole } = useUserRole();   // ← New proper role hook
 
   const [activeLoans, setActiveLoans] = useState<any[]>([]);
   const [closedLoans, setClosedLoans] = useState<any[]>([]);
@@ -26,16 +24,16 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [processors, setProcessors] = useState<any[]>([]);
-
+  const [products, setProducts] = useState<any[]>([]);
   // New Organizations
   const [pendingOrgs, setPendingOrgs] = useState<any[]>([]);
   const [pendingOrgsCount, setPendingOrgsCount] = useState(0);
   const [allOrgs, setAllOrgs] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    'price' | 'applications' | 'pending' | 'processing' | 'closed' | 'unassigned' | 'users' | 'new-orgs' | 'organizations'
-  >('processing');
+const [activeTab, setActiveTab] = useState<
+  'price' | 'applications' | 'pending' | 'processing' | 'closed' | 'unassigned' | 'users' | 'new-orgs' | 'organizations' | 'products'
+>('processing');
 
   const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
   const [currentUserOrgId, setCurrentUserOrgId] = useState<string | null>(null);
@@ -68,17 +66,13 @@ export default function DashboardPage() {
     }
 
     async function loadAllData() {
-      const { data: userData, error } = await supabase
+      const { data: userData } = await supabase
         .from('users')
         .select('role, organization_id')
         .eq('id', user.id)
         .single();
 
-      if (error) console.error("Failed to load user role:", error);
-
       const role = userData?.role || 'BROKER_AE';
-      console.log("✅ Loaded role from DB:", role);
-
       setCurrentUserRole(role);
       setCurrentUserOrgId(userData?.organization_id || null);
 
@@ -119,12 +113,73 @@ export default function DashboardPage() {
         setProcessors(procData || []);
       }
 
+        // === SUPER ADMIN: Show ALL products across all organizations ===
+      if (isSuperAdmin) {
+        const { data: productsData } = await supabase
+          .from('loan_products')
+          .select('*')
+          .order('created_at', { ascending: false });
+        setProducts(productsData || []);
+      } 
+      // Regular admins / org users
+      else if (isAdminOrHigher || hasPermission(currentUserForPerms, 'manage_products')) {
+        let orgIdToUse = userData?.organization_id || clerkOrg?.id;
+
+        if (orgIdToUse) {
+          const { data: productsData } = await supabase
+            .from('loan_products')
+            .select('*')
+            .eq('organization_id', orgIdToUse)
+            .order('created_at', { ascending: false });
+          setProducts(productsData || []);
+        }
+      }
+
       setLoading(false);
     }
 
     loadAllData();
   }, [isLoaded, user, router, isAdminOrHigher, canManageUsers, isProcessorOrHigher]);
+  // Refresh Products when Products tab is selected
+  useEffect(() => {
+    if (activeTab === 'products') {
+      const fetchProducts = async () => {
+        if (isSuperAdmin) {
+          // Super Admin sees ALL products
+          const { data } = await supabase
+            .from('loan_products')
+            .select('*')
+            .order('created_at', { ascending: false });
+          setProducts(data || []);
+        } else {
+          // Normal org-scoped access
+          let orgIdToUse = currentUserOrgId;
 
+          if (!orgIdToUse) {
+            // Fallback: try to get from Clerk if user record doesn't have it
+            const { data: userData } = await supabase
+              .from('users')
+              .select('organization_id')
+              .eq('id', user?.id)
+              .single();
+            
+            orgIdToUse = userData?.organization_id;
+          }
+
+          if (orgIdToUse) {
+            const { data } = await supabase
+              .from('loan_products')
+              .select('*')
+              .eq('organization_id', orgIdToUse)
+              .order('created_at', { ascending: false });
+            setProducts(data || []);
+          }
+        }
+      };
+
+      fetchProducts();
+    }
+  }, [activeTab, isSuperAdmin, currentUserOrgId, user?.id]);
   const fetchUnassignedLoans = async () => {
     if (!isProcessorOrHigher) return;
     const { data } = await supabase
@@ -151,16 +206,29 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false });
     setAllOrgs(data || []);
   };
+    const fetchProducts = async () => {
+    if (!currentUserOrgId) return;
+    const { data } = await supabase
+      .from('loan_products')
+      .select('*')
+      .eq('organization_id', currentUserOrgId)
+      .order('created_at', { ascending: false });
+    
+    setProducts(data || []);
+  };
 
-  const assignProcessor = async (loanId: number, processorId: string) => {
+  const assignProcessor = async (loanId: number, processorClerkId: string) => {
+    if (!processorClerkId) return;
+
     const { error } = await supabase
       .from('loans')
-      .update({ processor_id: processorId })
+      .update({ assigned_processor_id: processorClerkId })
       .eq('id', loanId);
 
-    if (error) alert('Failed to assign: ' + error.message);
-    else {
-      alert('Processor assigned!');
+    if (error) {
+      alert('Failed to assign processor: ' + error.message);
+    } else {
+      alert('Processor assigned successfully!');
       fetchUnassignedLoans();
     }
   };
@@ -234,35 +302,6 @@ export default function DashboardPage() {
     if (error) alert('Error: ' + error.message);
     else fetchPendingOrgs();
   };
-    // Assign a processor to a loan
-  const assignProcessor = async (loanId: number, processorClerkId: string) => {
-    if (!processorClerkId) return;
-
-    const { error } = await supabase
-      .from('loans')
-      .update({ assigned_processor_id: processorClerkId })
-      .eq('id', loanId);
-
-    if (error) {
-      alert('Failed to assign processor: ' + error.message);
-    } else {
-      alert('Processor assigned successfully!');
-      fetchUnassignedLoans(); // Refresh the list
-    }
-  };
-
-  // Fetch list of available processors for dropdown
-  const [processors, setProcessors] = useState<any[]>([]);
-
-  const fetchProcessors = async () => {
-    const { data } = await supabase
-      .from('users')
-      .select('clerk_id, full_name, email, role')
-      .in('role', ['PROCESSOR', 'LENDING_SUPERVISOR', 'SUPER_ADMIN'])
-      .order('full_name');
-
-    setProcessors(data || []);
-  };
 
   if (!isLoaded || loading) return <div className="p-8 text-center">Loading dashboard...</div>;
 
@@ -271,7 +310,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-8">
-      {/* Header with Start New Application Button */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-10 border-b pb-6">
         <div className="flex items-center gap-4">
           {user?.imageUrl && (
@@ -296,7 +335,7 @@ export default function DashboardPage() {
             Logout
           </button>
         </div>
-      </div>
+         </div>
 
       {/* Tabs */}
       <div className="flex border-b mb-8 gap-6 text-lg flex-wrap">
@@ -326,6 +365,15 @@ export default function DashboardPage() {
             className={`pb-4 font-medium ${activeTab === 'unassigned' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             Assign to Processor
+          </button>
+        )}
+   {/* === PRODUCTS TAB === */}
+        {(isSuperAdmin || isAdmin || hasPermission('manage_products')) && (
+          <button 
+            onClick={() => { setActiveTab('products'); }}
+            className={`pb-4 font-medium whitespace-nowrap flex items-center gap-2 ${activeTab === 'products' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            📦 Products
           </button>
         )}
 
@@ -414,6 +462,52 @@ export default function DashboardPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* ====================== PRODUCTS TAB ====================== */}
+      {activeTab === 'products' && (isSuperAdmin || isAdminOrHigher || hasPermission(currentUserForPerms, 'manage_products')) && (
+        <div className="bg-white rounded-3xl border p-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-semibold">Loan Products</h2>
+            <button
+              onClick={() => router.push('/products')}
+              className="px-8 py-4 bg-blue-600 text-white rounded-3xl font-semibold hover:bg-blue-700"
+            >
+              + Create New Product
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {products.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">
+                No products found for this organization.
+              </div>
+            ) : (
+              products.map((product: any) => (
+                <div 
+                  key={product.id}
+                  className="flex justify-between items-center p-6 border rounded-2xl hover:bg-gray-50 cursor-pointer"
+                  onClick={() => router.push(`/products/${product.id}`)}
+                >
+                  <div>
+                    <h3 className="font-semibold text-lg">{product.name}</h3>
+                    <p className="text-sm text-gray-500">{product.description || 'No description'}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`px-5 py-2 rounded-2xl text-sm font-medium ${product.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {product.active ? 'Active' : 'Inactive'}
+                    </span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); router.push(`/products/${product.id}`); }}
+                      className="px-6 py-2 text-blue-600 hover:bg-blue-50 rounded-2xl"
+                    >
+                      View / Edit →
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -561,19 +655,65 @@ export default function DashboardPage() {
       )}
 
       {activeTab === 'organizations' && (isAdminOrHigher || isSuperAdmin) && (
-        <div className="bg-white rounded-3xl border p-8">
-          <h2 className="text-2xl font-semibold mb-6">All Organizations</h2>
-          {allOrgs.map((org) => (
-            <div key={org.id} className="border-b py-6 flex justify-between">
-              <div>
-                <div className="font-medium">{org.name}</div>
-                <div className="text-sm text-gray-500">{org.slug}</div>
+  <div className="bg-white rounded-3xl border p-8">
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-2xl font-semibold">All Organizations</h2>
+      <button
+        onClick={() => router.push('/admin/organizations')}
+        className="px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 font-medium"
+      >
+        Manage White Label Settings →
+      </button>
+    </div>
+      {/* NEW: Products Button - Visible to Admins */}
+{activeTab === 'products' && (isSuperAdmin || isAdminOrHigher) && (
+  <div>
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-3xl font-bold">Loan Products & Standards</h2>
+      <button 
+        onClick={() => router.push('/products')}
+        className="px-8 py-4 bg-blue-600 text-white rounded-3xl font-semibold hover:bg-blue-700"
+      >
+        Manage Products →
+      </button>
+    </div>
+  </div>
+)}
+
+    {allOrgs.length === 0 ? (
+      <p className="text-gray-500 py-12 text-center">No organizations found.</p>
+    ) : (
+      allOrgs.map((org) => (
+        <div key={org.id} className="border-b py-6 flex justify-between items-center hover:bg-gray-50 px-4 rounded-2xl transition">
+          <div className="flex items-center gap-4">
+            {org.logo_url && (
+              <img src={org.logo_url} alt="logo" className="w-10 h-10 object-contain rounded-lg" />
+            )}
+            <div>
+              <div className="font-semibold text-lg">{org.name}</div>
+              <div className="text-sm text-gray-500">
+                {org.domain ? `Domain: ${org.domain}` : 'No custom domain'} 
+                {org.from_email && ` • From: ${org.from_email}`}
               </div>
-              <div className="text-sm text-gray-500">{new Date(org.created_at).toLocaleDateString()}</div>
             </div>
-          ))}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-500">
+              {new Date(org.created_at).toLocaleDateString()}
+            </div>
+            <button
+              onClick={() => router.push('/admin/organizations')}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-2xl font-medium transition"
+            >
+              Edit White Label
+            </button>
+          </div>
         </div>
-      )}
+      ))
+    )}
+  </div>
+)}
     </div>
   );
 }

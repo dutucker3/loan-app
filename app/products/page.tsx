@@ -80,6 +80,12 @@ export default function ProductsPage() {
         >
           + Create New Product
         </button>
+        <button
+  onClick={() => router.push('/products/keys')}
+  className="px-6 py-3 bg-amber-600 text-white rounded-2xl hover:bg-amber-700"
+>
+  🔑 Manage Standard Keys
+</button>
       </div>
 
       <div className="bg-white rounded-3xl border">

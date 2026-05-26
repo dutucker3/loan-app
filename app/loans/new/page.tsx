@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { LoanApplicationPDF } from '@/components/LoanApplicationPDF';
-import { useUser, useOrganization } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabase';
 import { isBorrower } from '@/lib/permissions';
-import { supabase as supabaseLib } from '@/lib/supabase'; // fallback import if needed
 
 function NewLoanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const { organization: clerkOrg } = useOrganization();
   const appId = searchParams.get('id');
 
   const [application, setApplication] = useState<any>(null);
@@ -24,10 +23,8 @@ function NewLoanContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCellBreakdown, setSelectedCellBreakdown] = useState<any>(null);
-  const [availablePrepaymentKeys, setAvailablePrepaymentKeys] = useState<string[]>(['None']);
-  const [availablePropertyTypes, setAvailablePropertyTypes] = useState<string[]>([]);
- 
-  
+  const [adjustmentKeys, setAdjustmentKeys] = useState<any[]>([]);
+
   // Manual input form
   const [manualForm, setManualForm] = useState({
     loanType: 'Purchase' as 'Purchase' | 'RefinanceRateTerm' | 'RefinanceCashOut',
@@ -43,145 +40,154 @@ function NewLoanContent() {
     propertyAddress: '',
     rentQualification: '',  
     monthlyRent: '',
-    prepayCanonicalKey: 'None',        // ← Single canonical key
+    prepayCanonicalKey: 'None',
   });
 
   const [selectedQuotes, setSelectedQuotes] = useState<any[]>([]);
-
-  // DSCR inputs
   const [taxes, setTaxes] = useState('');
   const [insurance, setInsurance] = useState('');
   const [hoa, setHoa] = useState('');
 
   const [currentUserRole, setCurrentUserRole] = useState<string>('BROKER_AE');
-  const [organization, setOrganization] = useState<any>(null);
-  const [supabaseClient, setSupabaseClient] = useState<any>(null);
- const [adjustmentKeys, setAdjustmentKeys] = useState<any[]>([]);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [orgMarkup, setOrgMarkup] = useState<{ wholesale: number; retail: number }>({ wholesale: 0, retail: 0 });
+  const [brokerMarkup, setBrokerMarkup] = useState<number>(0);
+
   const isBorrowerUser = isBorrower({ id: user?.id || '', role: currentUserRole });
 
-  // Load Supabase client
+  // ====================== LOAD USER + MARKUPS ======================
   useEffect(() => {
-    import('@/lib/supabase').then(({ supabase: client }) => setSupabaseClient(client));
-  }, []);
+    if (!user) return;
 
-  // Load user role + organization
-  useEffect(() => {
-    if (!user || !supabaseClient) return;
-    const loadUserAndOrg = async () => {
-      const { data: userData } = await supabaseClient.from('users').select('role, organization_id').eq('id', user.id).single();
-      setCurrentUserRole(userData?.role || 'BROKER_AE');
-      if (userData?.organization_id) {
-        const { data: org } = await supabaseClient.from('organizations').select('wholesale_markup, retail_markup, name').eq('id', userData.organization_id).single();
-        setOrganization(org);
+    const loadUserAndMarkups = async () => {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role, organization_id')
+        .eq('id', user.id)
+        .single();
+
+      if (userData) {
+        setCurrentUserRole(userData.role || 'BROKER_AE');
+        setOrganizationId(userData.organization_id);
+
+        if (userData.organization_id) {
+          // Load Organization Markups
+          const { data: orgMarkups } = await supabase
+            .from('pricing_markups')
+            .select('markup_type, value')
+            .eq('organization_id', userData.organization_id)
+            .eq('broker_id', null);
+
+          const orgData = { wholesale: 0, retail: 0 };
+          (orgMarkups || []).forEach((m: any) => {
+            if (m.markup_type === 'wholesale') orgData.wholesale = Number(m.value);
+            if (m.markup_type === 'retail') orgData.retail = Number(m.value);
+          });
+          setOrgMarkup(orgData);
+
+          // Load Broker-specific Retail Markup
+          if (!isBorrowerUser && userData.role !== 'BORROWER') {
+            const { data: brokerMarkupData } = await supabase
+              .from('pricing_markups')
+              .select('value')
+              .eq('broker_id', user.id)
+              .eq('markup_type', 'retail')
+              .single();
+
+            setBrokerMarkup(brokerMarkupData ? Number(brokerMarkupData.value) : 0);
+          }
+        }
       }
     };
-    loadUserAndOrg();
-  }, [user, supabaseClient]);
 
-  // Load Products
+    loadUserAndMarkups();
+  }, [user, isBorrowerUser]);
+
+  // ====================== LOAD PRODUCTS ======================
   useEffect(() => {
-    if (!supabaseClient || !user) return;
+    if (!user) return;
 
     const loadProducts = async () => {
-      let query = supabaseClient.from('loan_products').select('*').order('created_at', { ascending: false });
+      setLoading(true);
+      let query = supabase.from('loan_products').select('*').eq('active', true);
 
-      if (clerkOrg?.id) {
-        const { data: orgData } = await supabaseClient.from('organizations').select('id').eq('clerk_org_id', clerkOrg.id).single();
-        if (orgData?.id) query = query.eq('organization_id', orgData.id);
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+
+      if (userData?.organization_id && !['SUPER_ADMIN'].includes(userData.role)) {
+        query = query.eq('organization_id', userData.organization_id);
       }
 
-      const { data: prods } = await query;
-      setProducts(prods || []);
-      if (prods?.length && !selectedProduct) {
-        setSelectedProduct(prods[0]);
-      }
+      const { data } = await query;
+      setProducts(data || []);
+      if (data?.length > 0) setSelectedProduct(data[0]);
+      setLoading(false);
     };
 
     loadProducts();
-  }, [supabaseClient, user, clerkOrg]);
+  }, [user]);
 
-   // Fetch available standard prepayment keys from adjustment_keys table
-  // Load application if ?id=  (existing effect)
+  // Load Adjustment Keys
   useEffect(() => {
-    if (!appId || !supabaseClient) return;
-    // ... existing code
-  }, [appId, supabaseClient]);
-
-  useEffect(() => {
-    if (!appId) setLoading(false);
-  }, [appId]);
-
-  // ====================== NEW: LOAD ADJUSTMENT KEYS ======================
-  // Load keys (after products load)
-  useEffect(() => {
-    if (!supabaseClient || !selectedProduct?.organization_id) return;
+    if (!supabase || !selectedProduct?.organization_id) return;
 
     const loadKeys = async () => {
-      const { data, error } = await supabaseClient
+      const { data } = await supabase
         .from('adjustment_keys')
         .select('*')
-        .eq('organization_id', selectedProduct.organization_id)
-        .or('adjustment_type.eq.property_type,adjustment_type.eq.prepayment');
-
-      if (error) {
-        console.error('Failed to load adjustment keys:', error);
-        return;
-      }
-
+        .eq('organization_id', selectedProduct.organization_id);
       setAdjustmentKeys(data || []);
     };
 
     loadKeys();
-  }, [supabaseClient, selectedProduct?.organization_id]);   // Note: use organization_id only
+  }, [selectedProduct?.organization_id]);
 
-  // Fetch dynamic Property Type keys from adjustment_keys table
+  // Load existing application
   useEffect(() => {
-    const fetchPropertyTypes = async () => {
-      if (!supabaseClient || !selectedProduct?.organization_id) return;
+    if (!appId) return;
 
-      const { data } = await supabaseClient
-        .from('adjustment_keys')
-        .select('canonical_key')
-        .eq('adjustment_type', 'Property Type Adjustment')
-        .eq('organization_id', selectedProduct.organization_id);
-
-      const keys = data?.map((k: any) => k.canonical_key) || [];
-      setAvailablePropertyTypes(keys.sort((a: string, b: string) => a.localeCompare(b)));
-    };
-
-    fetchPropertyTypes();
-  }, [supabaseClient, selectedProduct]);
-
-  // Load application if ?id=
-  useEffect(() => {
-    if (!appId || !supabaseClient) return;
     const loadApplication = async () => {
-      setLoading(true);
-      const { data: app } = await supabaseClient.from('loan_applications').select('*').eq('id', appId).single();
+      const { data: app } = await supabase
+        .from('loan_applications')
+        .select('*')
+        .eq('id', appId)
+        .single();
+
       if (app) {
         setApplication(app);
         if (app.form_data) {
-          setManualForm(prev => ({
-            ...prev,
-            ...app.form_data,
-            monthlyRent: app.form_data.monthlyRent || app.form_data.rentalIncome || prev.monthlyRent,
-          }));
-          setTaxes(app.form_data.annualTaxes || '');
-          setInsurance(app.form_data.annualInsurance || '');
-          setHoa(app.form_data.annualHoa || '');
+          setManualForm(prev => ({ ...prev, ...app.form_data }));
         }
       }
-      setLoading(false);
     };
-    loadApplication();
-  }, [appId, supabaseClient]);
 
-  useEffect(() => {
-    if (!appId) setLoading(false);
+    loadApplication();
   }, [appId]);
 
- 
-  // ====================== HANDLERS ======================
+  // Form persistence
+  useEffect(() => {
+    const saved = localStorage.getItem('loanFormDraft');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setManualForm(parsed.manualForm || manualForm);
+      setTaxes(parsed.taxes || '');
+      setInsurance(parsed.insurance || '');
+      setHoa(parsed.hoa || '');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('loanFormDraft', JSON.stringify({
+      manualForm,
+      taxes,
+      insurance,
+      hoa
+    }));
+  }, [manualForm, taxes, insurance, hoa]);
+
   const handleManualChange = (field: string, value: any) => {
     setManualForm(prev => ({ ...prev, [field]: value }));
   };
@@ -189,46 +195,66 @@ function NewLoanContent() {
   const formData = application ? (application.form_data || {}) : manualForm;
   const purchasePrice = parseFloat((formData.purchasePrice || formData.estimatedValue || '0').replace(/,/g, '')) || 0;
 
-  // ====================== MARKUP ======================
-  const getMarkup = () => {
-    if (selectedProduct?.pricing_matrix?.markup) {
-      const m = selectedProduct.pricing_matrix.markup;
-      return isBorrowerUser ? (m.retailMarkup || 0) : (m.wholesaleMarkup || 0);
-    }
-    if (!organization) return 0;
-    return isBorrowerUser ? (organization.retail_markup || 0) : (organization.wholesale_markup || 0);
+  // ====================== MARKUP LOGIC ======================
+  const getTotalMarkup = (): number => {
+    const baseOrgMarkup = isBorrowerUser ? orgMarkup.retail : orgMarkup.wholesale;
+    const additionalBrokerMarkup = brokerMarkup; // only applies on top for brokers
+    return baseOrgMarkup + additionalBrokerMarkup;
   };
 
-  const getFinalPrice = (basePrice: number | null): number | null => {
-    if (basePrice === null) return null;
-    let final = basePrice + getMarkup();
+  const getFinalPrice = (subtotal: number): number => {
+    if (!subtotal || isNaN(subtotal)) return 0;
 
-    if (selectedProduct?.pricing_matrix?.markup) {
-      const m = selectedProduct.pricing_matrix.markup;
-      if (!isBorrowerUser) {
-        if (m.wholesalePriceFloor && final < m.wholesalePriceFloor) final = m.wholesalePriceFloor;
-        if (m.wholesalePriceCeiling && final > m.wholesalePriceCeiling) final = m.wholesalePriceCeiling;
-      } else {
-        if (m.retailPriceFloor && final < m.retailPriceFloor) final = m.retailPriceFloor;
-        if (m.retailPriceCeiling && final > m.retailPriceCeiling) final = m.retailPriceCeiling;
+    let final = subtotal - getTotalMarkup();
+
+    const matrix = selectedProduct?.pricing_matrix || {};
+    const markupObj = matrix.markup || matrix.Markup?.markup || matrix.Markup?.Markup?.markup || {};
+
+    const floor = isBorrowerUser 
+      ? (markupObj.retailPriceFloor ?? 97) 
+      : (markupObj.wholesalePriceFloor ?? 97);
+
+    const ceiling = isBorrowerUser 
+      ? (markupObj.retailPriceCeiling ?? 100) 
+      : (markupObj.wholesalePriceCeiling ?? 102);
+
+    final = Math.max(final, floor);
+    final = Math.min(final, ceiling);
+
+    if (final >= 103) return 0;
+    if (final >= 102.01) final = 102;
+    if (final < 96) final = 96;
+
+    return Math.round(final * 100) / 100;
+  };
+
+  // ====================== EXISTING HELPERS (UNCHANGED) ======================
+  const getPrepaymentCanonicalKey = (): string => manualForm.prepayCanonicalKey || 'None';
+
+  const getAliasesForKey = (canonicalKey: string, adjustmentType: string): string[] => {
+    if (!canonicalKey || !adjustmentKeys.length) return [canonicalKey];
+
+    const keyRow = adjustmentKeys.find(k => 
+      k.canonical_key?.trim() === canonicalKey?.trim() && 
+      k.adjustment_type === adjustmentType
+    );
+
+    if (!keyRow) return [canonicalKey];
+
+    let aliases: string[] = [canonicalKey];
+
+    if (keyRow.aliases) {
+      try {
+        let parsed: any = keyRow.aliases;
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        if (Array.isArray(parsed)) {
+          aliases = [...new Set([canonicalKey, ...parsed.map((a: any) => String(a).trim())])];
+        }
+      } catch (e) {
+        console.warn(`Failed to parse aliases for "${canonicalKey}"`);
       }
     }
-
-    if (final > 103) return null;
-    if (final >= 102.01) final = 102;
-    if (final < 96) return null;
-    if (final >= 96 && final < 97) final = 97;
-
-    return Math.floor(final * 100) / 100;
-  };
-
-  // ====================== HELPERS ======================
-  const getPrepaymentCanonicalKey = (): string => {
-    return manualForm.prepayCanonicalKey || 'None';
-  };
-
-  const getPropertyTypeMatrixKey = (displayValue: string): string => {
-    return displayValue;   // Now directly uses canonical key from your table
+    return aliases;
   };
 
   const getLtvBucket = (ltv: number): string => {
@@ -240,9 +266,6 @@ function NewLoanContent() {
     if (ltv <= 75) return '70.01-75';
     return '75.01-80';
   };
-    // ====================== BUCKETS ======================
-  const interestRates = Array.from({ length: 57 }, (_, i) => parseFloat((5.0 + i * 0.125).toFixed(3)));
-  const ltvBuckets = [50, 55, 60, 65, 70, 75, 80];
 
   const getFicoBucket = (fico: number): string => {
     if (fico >= 780) return '780+';
@@ -257,28 +280,25 @@ function NewLoanContent() {
 
   const getDscrBucket = (dscr: number, fico: number, isPurchase: boolean = true): string => {
     if (dscr >= 1.25) return '>=1.25x';
-    if (dscr >= 1.15) return '>=1.15x and <1.25x';
-    if (dscr >= 1.00) return '>=1.00x and <1.15x';
-    if (dscr >= 0.95 && fico >= 720) return isPurchase ? '0.95-0.99x (Purch, 720+ FICO)' : '0.95-0.99x (Refi, 720+ FICO)';
-    if (dscr >= 0.85 && fico >= 720) return isPurchase ? '0.85-0.94x (Purch, 720+ FICO)' : '0.85-0.94x (Refi, 720+ FICO)';
-    if (dscr >= 0.75 && fico >= 720) return isPurchase ? '0.75-0.84x (Purch, 720+ FICO)' : '0.75-0.84x (Refi, 720+ FICO)';
+    if (dscr >= 1.15) return '1.15x - 1.24x';
+    if (dscr >= 1.00) return '1.00x - 1.14x';
+    if (dscr >= 0.75) return '0.75x - 0.99x';
     return '<0.75x';
   };
 
   const getLoanSizeBucket = (amount: number): string => {
-    if (amount <= 125000) return '100001-125000';
-    if (amount <= 150000) return '125001-150000';
-    if (amount <= 250000) return '150001-250000';
-    if (amount <= 400000) return '250001-400000';
-    if (amount <= 500000) return '400001-500000';
-    if (amount <= 750000) return '500001-750000';
-    if (amount <= 1000000) return '750001-1000000';
-    if (amount <= 1500000) return '1000001-1500000';
-    if (amount <= 2000000) return '1500001-2000000';
-    if (amount <= 2500000) return '2000001-2500000';
-    if (amount <= 3000000) return '2500001-3000000';
-    if (amount <= 3500000) return '3000001-3500000';
-    return '3500001+';
+    if (amount <= 125000) return '$100,001 - $125,000';
+    if (amount <= 150000) return '$125,001 - $150,000';
+    if (amount <= 250000) return '$150,001 - $250,000';
+    if (amount <= 400000) return '$250,001 - $400,000';
+    if (amount <= 500000) return '$400,001 - $500,000';
+    if (amount <= 750000) return '$500,001 - $750,000';
+    if (amount <= 1000000) return '$750,001 - $1,000,000';
+    if (amount <= 1500000) return '$1,000,001 - $1,500,000';
+    if (amount <= 2000000) return '$1,500,001 - $2,000,000';
+    if (amount <= 2500000) return '$2,000,001 - $2,500,000';
+    if (amount <= 3000000) return '$2,500,001 - $3,000,000';
+    return '$3,000,001+';
   };
 
   const calculateDSCR = (rate: number, ltv: number) => {
@@ -311,7 +331,11 @@ function NewLoanContent() {
     return Math.round(payment);
   };
 
-  // ====================== UPDATED getBrokerPrice ======================
+  const interestRates = Array.from({ length: 57 }, (_, i) => parseFloat((5.0 + i * 0.125).toFixed(3)));
+
+  const ltvBuckets = [50, 55, 60, 65, 70, 75, 80];
+
+  // ====================== UPDATED PRICING LOGIC ======================
   const getBrokerPrice = (rate: number, ltv: number, debug: boolean = false): number | any => {
     if (!selectedProduct?.pricing_matrix) return null;
 
@@ -325,99 +349,88 @@ function NewLoanContent() {
       return null;
     }
 
-    // Base Rate
-    const baseMatrix = matrix['baseRates'] || matrix['Base Rate'] || {};
-    const rateStr3 = rate.toFixed(3);
-    const rateStr4 = rate.toFixed(4);
-    let basePriceStr = baseMatrix[rateStr4] || baseMatrix[rateStr3] || baseMatrix[rate.toString()] || baseMatrix[rate];
-    let price = parseFloat(basePriceStr || '0');
-
-    if (!price || isNaN(price)) {
-      if (debug) console.log(`❌ No Base Rate found for ${rate}%`);
-      return null;
-    }
-
     const ltvKey = getLtvBucket(ltv);
     const fico = parseFloat(manualForm.borrowerFico || '720');
     const dscr = calculateDSCR(rate, ltv);
     const isPurchase = manualForm.loanType === 'Purchase';
-    const propertyType = manualForm.propertyType || 'Single Family';
-    const rentType = manualForm.rentQualification || 'LTR: In-Place/Market Rent';
-
-    const safeParse = (val: any): number => isNaN(parseFloat(val)) ? 0 : parseFloat(val);
     const cellLoanAmount = purchasePrice * (ltv / 100);
 
-    let runningTotal = price;
+    const safeParse = (val: any): number => isNaN(parseFloat(val)) ? 0 : parseFloat(val);
+
+    const baseRates = matrix['baseRates'] || matrix['Base Rate'] || {};
+    const rateKey4 = rate.toFixed(4);
+    const rateKey3 = rate.toFixed(3);
+    
+    let baseRate = parseFloat(
+      baseRates[rateKey4] || baseRates[rateKey3] || baseRates[rate] || baseRates[rate.toString()] || '0'
+    );
+
+    let runningTotal = baseRate;
 
     const breakdown: any = {
-      baseRate: price,
-      ficoAdj: safeParse((matrix['ficoLtvGrid'] || matrix['FICO Adjustment'] || {})[getFicoBucket(fico)]?.[ltvKey]),
-      dscrAdj: safeParse((matrix['DSCR Adjustment'] || matrix['dscrLtvGrid'] || {})[getDscrBucket(dscr, fico, isPurchase)]?.[ltvKey]),
-      loanBalanceAdj: safeParse((matrix['loanBalanceLtvGrid'] || matrix['Loan Balance Adjustment'] || {})[getLoanSizeBucket(cellLoanAmount)]?.[ltvKey]),
-      propertyAdj: 0,
-      amortizationAdj: safeParse((matrix['amortizationAdjustment'] || matrix['Amortization Adjustment'] || {})[manualForm.amortization] || 
-                                (matrix['amortizationAdjustment'] || matrix['Amortization Adjustment'] || {})['Fully Amortizing']),
-      prepaymentAdj: 0,
-      rentAdj: safeParse((matrix['Rent Adjustments'] || {})[rentType]?.[ltvKey]),
-      otherAdj: safeParse((matrix['Other Adjustments'] || matrix['otherAdjustments'] || {})['Standard']?.[ltvKey]),
-      markup: 0,
-      subtotal: 0,
-      finalPrice: 0
+      baseRate,
+      ficoAdj: 0, dscrAdj: 0, loanBalanceAdj: 0,
+      propertyAdj: 0, amortizationAdj: 0, prepaymentAdj: 0,
+      rentAdj: 0, otherAdj: 0,
+      markup: 0, subtotal: 0, finalPrice: 0
     };
 
-    // Property Type
-    const matrixPropKey = getPropertyTypeMatrixKey(propertyType);
-    const propMatrix = matrix['propertyTypeAdjustment'] || matrix['Property Type Adjustment'] || 
-                       matrix['propertyTypeRefi'] || matrix['propertyTypeAcquisition'] || {};
-    const propertyAdj = safeParse(propMatrix[matrixPropKey]?.[ltvKey] || propMatrix[matrixPropKey]);
-    breakdown.propertyAdj = propertyAdj;
-    runningTotal += propertyAdj;
+    const dynamicAdjustments = [
+      { key: 'ficoAdj', canonical: getFicoBucket(fico), matrixKey: 'FICO Adjustment' },
+      { key: 'dscrAdj', canonical: getDscrBucket(dscr, fico, isPurchase), matrixKey: 'DSCR Adjustment' },
+      { key: 'loanBalanceAdj', canonical: getLoanSizeBucket(cellLoanAmount), matrixKey: 'loanBalanceLtvGrid' },
+      { key: 'propertyAdj', canonical: manualForm.propertyType || 'Single Family', matrixKey: 'propertyTypeRefi' },
+      { key: 'amortizationAdj', canonical: manualForm.amortization || 'Fully Amortizing', matrixKey: 'Amortization Adjustment' },
+      { key: 'prepaymentAdj', canonical: getPrepaymentCanonicalKey(), matrixKey: 'Prepayment Adjustment' },
+      { key: 'rentAdj', canonical: manualForm.rentQualification || 'LTR: In-Place/Market Rent', matrixKey: 'Rent Adjustments' },
+      { key: 'otherAdj', canonical: 'Rural', matrixKey: 'Other Adjustments' },
+    ];
 
-    if (debug) {
-      console.log("Property Type Adjustment".padEnd(45) + propertyAdj.toFixed(3) + `  (Mapped: "${propertyType}" → "${matrixPropKey}")`);
-    }
+    dynamicAdjustments.forEach(({ key, canonical, matrixKey }) => {
+      if (!canonical || canonical === 'None') return;
 
-    // Prepayment - NEW CANONICAL KEY
-    let prepayAdj = 0;
-    const prepayLabel = getPrepaymentCanonicalKey();
+      let adjMatrix = matrix[matrixKey] || {};
+      let adjValue = 0;
 
-    if (prepayLabel !== 'None') {
-      const prepayMatrix = matrix['Prepayment Adjustment'] || {};
-      prepayAdj = safeParse(prepayMatrix[prepayLabel]?.[ltvKey] || '0');
-
-      if (debug) {
-        console.log("Prepayment Adjustment".padEnd(45) + prepayAdj.toFixed(3) + `  (Canonical: "${prepayLabel}")`);
+      const aliases = getAliasesForKey(canonical, matrixKey);
+      for (const alias of aliases) {
+        const value = adjMatrix[alias]?.[ltvKey] || adjMatrix[alias];
+        adjValue = safeParse(value);
+        if (adjValue !== 0) break;
       }
-    } else if (debug) {
-      console.log("Prepayment Adjustment".padEnd(45) + "0.000  (None)");
-    }
 
-    breakdown.prepaymentAdj = prepayAdj;
-    runningTotal += prepayAdj;
+      breakdown[key] = adjValue;
+      runningTotal += adjValue;
+    });
 
-    // Final Totals
-    breakdown.subtotal = runningTotal =
-      breakdown.baseRate + breakdown.ficoAdj + breakdown.dscrAdj + breakdown.loanBalanceAdj +
-      breakdown.propertyAdj + breakdown.amortizationAdj + breakdown.prepaymentAdj +
-      breakdown.rentAdj + breakdown.otherAdj;
+    // NEW LAYERED MARKUP
+    breakdown.markup = getTotalMarkup();
+    runningTotal -= breakdown.markup;
 
-    breakdown.markup = getMarkup();
-    breakdown.finalPrice = getFinalPrice(breakdown.subtotal);
+    breakdown.subtotal = runningTotal;
+    breakdown.finalPrice = getFinalPrice(runningTotal);
 
     if (debug) {
-      console.log("─".repeat(65));
-      console.log("SUBTOTAL (Base + All Adjustments)".padEnd(45) + breakdown.subtotal.toFixed(3));
-      console.log("Markup / Margin".padEnd(45) + breakdown.markup.toFixed(3));
-      console.log("FINAL BROKER PRICE".padEnd(45) + breakdown.finalPrice.toFixed(3));
-      console.log("=======================================\n");
+      console.log("=== PRICING BREAKDOWN ===");
+      console.log("Base Rate:", baseRate.toFixed(3));
+      Object.keys(breakdown).forEach(k => {
+        if (k !== 'baseRate' && k !== 'subtotal' && k !== 'finalPrice') {
+          console.log(k.padEnd(20), (breakdown[k] || 0).toFixed(3));
+        }
+      });
+      console.log("Total Markup:", breakdown.markup.toFixed(3));
+      console.log("Final Price:", breakdown.finalPrice.toFixed(3));
     }
 
-    return debug ? breakdown : breakdown.subtotal;
+    return debug ? breakdown : breakdown.finalPrice;
   };
 
   const getPrice = (rate: number, ltv: number): number | null => {
-    const base = getBrokerPrice(rate, ltv, false);
-    return getFinalPrice(base);
+    const result = getBrokerPrice(rate, ltv, false);
+    const finalPrice = typeof result === 'number' ? result : (result?.finalPrice || 0);
+
+    if (finalPrice < 96 || finalPrice > 102) return null;
+    return finalPrice;
   };
 
   const getDisplayValue = (rate: number, ltv: number) => {
@@ -432,10 +445,7 @@ function NewLoanContent() {
 
   const handleCellClick = (rate: number, ltv: number) => {
     const breakdown = getBrokerPrice(rate, ltv, true);
-    if (!breakdown || typeof breakdown === 'number') {
-      setSelectedCellBreakdown(null);
-      return;
-    }
+    if (!breakdown || typeof breakdown === 'number') return;
 
     const monthlyPayment = calculateMonthlyPayment(rate, ltv);
     const dscr = calculateDSCR(rate, ltv);
@@ -466,21 +476,36 @@ function NewLoanContent() {
     }
   };
 
-  // ====================== REST OF YOUR CODE (unchanged) ======================
-  const sendQuoteToBorrower = async () => { /* your existing code */ };
-  const saveQuoteAndStartApplication = async () => { /* your existing code */ };
+  const isFicoEligible = () => {
+    const fico = parseFloat(manualForm.borrowerFico || '720');
+    return fico >= 620;
+  };
+
+  const isFicoLtvEligible = (rate: number, ltv: number): boolean => true; // placeholder - expand as needed
+  const isDscrEligible = (rate: number, ltv: number): boolean => true;   // placeholder
+
+  const availableRates = useMemo(() => {
+    if (!selectedProduct?.pricing_matrix) return [];
+    return interestRates.filter(rate => 
+      ltvBuckets.some(ltv => getPrice(rate, ltv) !== null)
+    );
+  }, [selectedProduct, manualForm.borrowerFico]);
+
+  const sendQuoteToBorrower = async () => {
+    alert("Quote sent to borrower! (placeholder)");
+  };
+
+  const saveQuoteAndStartApplication = async () => {
+    alert("Quote saved! (placeholder)");
+  };
 
   if (error) return <div className="p-10 text-red-600 text-center text-xl">Error: {error}</div>;
-  if (loading) return <div className="p-10 text-center text-xl">Loading pricing matrix...</div>;
+  if (loading) return <div className="p-10 text-center text-xl">Loading products and pricing matrix...</div>;
 
   return (
     <div className="max-w-7xl mx-auto p-8">
-      {/* HEADER */}
       <div className="flex items-center justify-between mb-8 border-b pb-6">
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl font-medium text-lg"
-        >
+        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl font-medium text-lg">
           ← Back to Dashboard
         </button>
 
@@ -488,16 +513,19 @@ function NewLoanContent() {
           {isBorrowerUser ? 'Retail Pricing Matrix' : 'Wholesale Pricing Matrix'}
         </h1>
 
-        <PDFDownloadLink
-          document={<LoanApplicationPDF form={formData} />}
-          fileName={`Quote-${formData.propertyAddress || 'NewLoan'}.pdf`}
-        >
+        <PDFDownloadLink document={<LoanApplicationPDF form={formData} />} fileName={`Quote-${formData.propertyAddress || 'NewLoan'}.pdf`}>
           {({ loading }) => (
             <button className="px-8 py-4 bg-blue-600 text-white rounded-3xl font-medium hover:bg-blue-700">
               {loading ? 'Generating PDF...' : '📄 Download PDF'}
             </button>
           )}
         </PDFDownloadLink>
+      </div>
+
+      <div className={`mb-8 p-4 rounded-2xl text-center font-medium ${isBorrowerUser ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+        {isBorrowerUser 
+          ? '📌 You are viewing RETAIL rates' 
+          : `📌 Wholesale View • Total Markup Applied: ${getTotalMarkup().toFixed(2)}%`}
       </div>
 
       {/* MANUAL INPUT FORM */}
@@ -531,21 +559,23 @@ function NewLoanContent() {
               />
             </div>
 
-<div>
-  <label className="block text-sm font-medium mb-2">Property Type</label>
-  <select 
-    value={manualForm.propertyType} 
-    onChange={(e) => handleManualChange('propertyType', e.target.value)} 
-    className="w-full px-5 py-4 border rounded-2xl"
-  >
-    <option value="">— Select Property Type —</option>
-    {availablePropertyTypes.map(type => (
-      <option key={type} value={type}>
-        {type}
-      </option>
-    ))}
-  </select>
-</div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Property Type</label>
+              <select 
+                value={manualForm.propertyType || ''} 
+                onChange={(e) => handleManualChange('propertyType', e.target.value)}
+                className="w-full px-5 py-4 border rounded-2xl"
+              >
+                <option value="">— Select Property Type —</option>
+                {adjustmentKeys
+                  .filter(k => k.adjustment_type === 'Property Type Adjustment')
+                  .map(key => (
+                    <option key={key.canonical_key} value={key.canonical_key}>
+                      {key.display_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Borrower FICO</label>
@@ -586,44 +616,29 @@ function NewLoanContent() {
               <label className="block text-sm font-medium mb-2">Borrower Email</label>
               <input type="email" value={manualForm.borrowerEmail} onChange={(e) => handleManualChange('borrowerEmail', e.target.value)} className="w-full px-5 py-4 border rounded-2xl" placeholder="john@example.com" />
             </div>
-{/* Dynamic Rent Type Dropdown - based on product's pricing_matrix */}
-<div className="space-y-2">
-  <label className="block text-sm font-medium text-gray-700">
-    Rent Qualification / Type
-  </label>
-  <select
-    value={manualForm.rentQualification || ''}
-    onChange={(e) => handleManualChange('rentQualification', e.target.value)}
-    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500"
-  >
-    <option value="">— Select Rent Type —</option>
-    {selectedProduct?.pricing_matrix && 
-      (() => {
-        const matrix = typeof selectedProduct.pricing_matrix === 'string'
-          ? JSON.parse(selectedProduct.pricing_matrix)
-          : selectedProduct.pricing_matrix || {};
-        
-        const rentAdj = matrix['Rent Adjustments'] || 
-                       matrix['rentAdjustment'] || 
-                       matrix['Rent Qualification'] || 
-                       matrix['Rent Type Adjustment'] || {};
-        
-        return Object.keys(rentAdj)
-          .sort()
-          .map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ));
-      })()
-    }
-  </select>
-</div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Rent Qualification</label>
+              <select 
+                value={manualForm.rentQualification || ''} 
+                onChange={(e) => handleManualChange('rentQualification', e.target.value)}
+                className="w-full px-5 py-4 border rounded-2xl"
+              >
+                <option value="">— Select Rent Method —</option>
+                {adjustmentKeys
+                  .filter(k => k.adjustment_type === 'Rent Adjustments')
+                  .map(key => (
+                    <option key={key.canonical_key} value={key.canonical_key}>
+                      {key.display_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Monthly Rent / Gross Rental Income ($)</label>
               <input type="text" value={manualForm.monthlyRent} onChange={(e) => handleManualChange('monthlyRent', e.target.value)} className="w-full px-5 py-4 border rounded-2xl" placeholder="4500" />
             </div>
-            
 
             <div>
               <label className="block text-sm font-medium mb-2">Annual Taxes ($)</label>
@@ -639,22 +654,24 @@ function NewLoanContent() {
               <label className="block text-sm font-medium mb-2">Annual HOA ($)</label>
               <input type="text" value={hoa} onChange={(e) => setHoa(e.target.value)} className="w-full px-5 py-4 border rounded-2xl" placeholder="0" />
             </div>
-              {/* Prepayment Penalty */}
-{/* Single Prepayment Dropdown */}
-<div>
-  <label className="block text-sm font-medium mb-1">Prepayment Penalty</label>
-  <select 
-    value={manualForm.prepayCanonicalKey || 'None'} 
-    onChange={e => handleManualChange('prepayCanonicalKey', e.target.value)}
-    className="w-full p-3 border rounded-2xl"
-  >
-    {availablePrepaymentKeys.map(key => (
-      <option key={key} value={key}>
-        {key}
-      </option>
-    ))}
-  </select>
-</div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Prepayment Penalty</label>
+              <select 
+                value={manualForm.prepayCanonicalKey || ''} 
+                onChange={(e) => handleManualChange('prepayCanonicalKey', e.target.value)}
+                className="w-full px-5 py-4 border rounded-2xl"
+              >
+                <option value="">— Select Prepayment —</option>
+                {adjustmentKeys
+                  .filter(k => k.adjustment_type === 'Prepayment Adjustment')
+                  .map(key => (
+                    <option key={key.canonical_key} value={key.canonical_key}>
+                      {key.display_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
             <div className="md:col-span-3">
               <label className="block text-sm font-medium mb-2">Property Address</label>
@@ -675,140 +692,164 @@ function NewLoanContent() {
         {isBorrowerUser ? '📌 You are viewing RETAIL rates • Origination Fee shown' : '📌 You are viewing WHOLESALE rates'}
       </div>
 
-   {/* Product Selector - Auto-select first product */}
-<div className="mb-8 bg-white border rounded-3xl p-8">
-  <label className="block text-sm font-medium mb-3 text-lg">Select Loan Product</label>
-  <select 
-    value={selectedProduct?.id || ''}
-    onChange={(e) => {
-      const value = e.target.value;
-      if (!value) {
-        setSelectedProduct(null);
-        return;
-      }
-      const product = products.find(p => String(p.id) === value);
-      setSelectedProduct(product || null);
-      setSelectedRate('');
-      setSelectedLTV(0);
-    }}
-    className="w-full max-w-md border rounded-3xl p-5 text-lg focus:outline-none focus:ring-2 focus:ring-black"
-  >
-    {products.length === 0 ? (
-      <option value="">No products available</option>
-    ) : (
-      <>
-        {/* No empty placeholder - we auto-select */}
-        {products.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name} {p.loan_type ? `(${p.loan_type})` : ''}
-          </option>
-        ))}
-      </>
-    )}
-  </select>
-</div>
-{selectedProduct && (
-  <div className="mb-6 p-6 bg-gray-900 text-white rounded-3xl text-sm font-mono">
-    <strong>🔍 Debug Info</strong><br />
-    Product: {selectedProduct.name}<br />
-    FICO: {manualForm.borrowerFico || 'Not set'}<br />
-    Purchase Price: ${purchasePrice.toLocaleString()}<br />
-
-    {selectedCellBreakdown ? (
-      <div className="mt-4 border-t border-gray-700 pt-4">
-        <strong>📊 Selected Cell: {selectedCellBreakdown.rate}% @ {selectedCellBreakdown.ltv}% LTV</strong><br /><br />
-        
-        Base Rate: {selectedCellBreakdown.baseRate?.toFixed(3)}<br />
-        FICO Adjustment: {selectedCellBreakdown.ficoAdj?.toFixed(3)}<br />
-        DSCR Adjustment: {selectedCellBreakdown.dscrAdj?.toFixed(3)}<br />
-        Loan Balance Adjustment: {selectedCellBreakdown.loanBalanceAdj?.toFixed(3)}<br />
-        Property Type Adjustment: {selectedCellBreakdown.propertyAdj?.toFixed(3) || '0.000'}<br />
-        Amortization Adjustment: {selectedCellBreakdown.amortizationAdj?.toFixed(3)}<br />
-        Prepayment Adjustment: {selectedCellBreakdown.prepaymentAdj?.toFixed(3)}<br />
-        Rent Adjustments: {selectedCellBreakdown.rentAdj?.toFixed(3)}<br />
-        Other Adjustments: {selectedCellBreakdown.otherAdj?.toFixed(3)}<br />
-        
-        <strong>────────────────────────────</strong><br />
-        Subtotal: {selectedCellBreakdown.subtotal?.toFixed(3)}<br />
-        Markup: +{selectedCellBreakdown.markup?.toFixed(3)}<br />
-        <strong>Final Price: {selectedCellBreakdown.finalPrice?.toFixed(2)}</strong><br /><br />
-        
-        Monthly Payment: ${selectedCellBreakdown.monthlyPayment?.toLocaleString() || 'N/A'}<br />
-        DSCR: {selectedCellBreakdown.dscr}
+      {/* Product Selector */}
+      <div className="mb-8 bg-white border rounded-3xl p-8">
+        <label className="block text-sm font-medium mb-3 text-lg">Select Loan Product</label>
+        <select 
+          value={selectedProduct?.id || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (!value) {
+              setSelectedProduct(null);
+              return;
+            }
+            const product = products.find(p => String(p.id) === value);
+            setSelectedProduct(product || null);
+            setSelectedRate('');
+            setSelectedLTV(0);
+          }}
+          className="w-full max-w-md border rounded-3xl p-5 text-lg focus:outline-none focus:ring-2 focus:ring-black"
+        >
+          {products.length === 0 ? (
+            <option value="">No products available</option>
+          ) : (
+            products.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))
+          )}
+        </select>
       </div>
-    ) : (
-      <span className="text-yellow-400">Click any eligible cell to see full breakdown here</span>
-    )}
+{/* Pricing Breakdown */}
+{selectedProduct && selectedCellBreakdown && (
+  <div className="mb-8 bg-white border rounded-3xl p-8">
+    <h3 className="text-2xl font-semibold mb-6">Pricing Breakdown</h3>
+    <div className="space-y-3 text-sm">
+      <div className="flex justify-between py-2 border-b">
+        <span>Base Rate</span>
+        <span className="font-medium">{selectedCellBreakdown.baseRate?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>FICO Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.ficoAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>DSCR Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.dscrAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Loan Balance Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.loanBalanceAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Property Type Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.propertyAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Amortization Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.amortizationAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Prepayment Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.prepaymentAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Rent Adjustment</span>
+        <span className="font-medium">{selectedCellBreakdown.rentAdj?.toFixed(3)}</span>
+      </div>
+      <div className="flex justify-between py-2 border-b">
+        <span>Markup / Margin</span>
+        <span className="font-medium text-green-600">-{selectedCellBreakdown.markup?.toFixed(3)}</span>
+      </div>
+
+      <div className="flex justify-between py-4 border-t-2 border-black text-lg font-bold">
+        <span>Final Price</span>
+        <span>{selectedCellBreakdown.finalPrice?.toFixed(2)}</span>
+      </div>
+    </div>
   </div>
 )}
 
-      {/* Helper Text */}
-      {selectedProduct && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl text-center">
-          <p className="text-blue-700 font-medium">💡 Click on any eligible cell below to generate a Loan Quote for the Borrower</p>
+{/* FICO Warning */}
+{selectedProduct && !isFicoEligible() && (
+  <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-3xl text-center">
+    <p className="text-red-700 font-medium">
+      Borrower FICO ({manualForm.borrowerFico || '—'}) is too low for this product.<br />
+      Minimum required FICO is typically 660+.
+    </p>
+  </div>
+)}
+
+{/* Pricing Grid */}
+{selectedProduct ? (
+  <div className="bg-white border-2 border-black rounded-3xl p-8">
+    <h2 className="text-3xl font-bold text-center mb-8">{selectedProduct.name} Pricing Grid</h2>
+    
+    <table className="w-full border-collapse text-sm">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="border p-4 text-left font-semibold">Interest Rate</th>
+          {ltvBuckets.map(ltv => {
+            const loanAmt = Math.round(purchasePrice * (ltv / 100));
+            return (
+              <th key={ltv} className="border p-4 text-center font-semibold">
+                {ltv}% LTV<br/>
+                <span className="text-xs font-normal text-gray-600">${loanAmt.toLocaleString()}</span>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {availableRates.map((rate) => (
+            <tr key={rate}>
+            <td className="border p-4 font-medium bg-gray-50">{rate.toFixed(3)}%</td>
+          {ltvBuckets.map((ltv) => {
+  const price = getPrice(rate, ltv);
+  const dscr = calculateDSCR(rate, ltv);
+  
+  // NEW FICO + DSCR Eligibility Check
+  const ficoLtvOk = isFicoLtvEligible(rate, ltv);
+  const dscrOk = isDscrEligible(rate, ltv);
+  const isEligible = price !== null && ficoLtvOk && dscrOk;
+
+  return (
+    <td
+      key={ltv}
+      onClick={() => isEligible && handleCellClick(rate, ltv)}
+      className={`border p-4 text-center cursor-pointer hover:bg-blue-50 transition-colors ${!isEligible ? 'bg-red-50' : ''}`}
+    >
+      {isEligible ? (
+        <>
+          <div className="font-bold text-lg">{getDisplayValue(rate, ltv)}</div>
+          <div className="text-xs text-gray-600">{dscr.toFixed(2)}x DSCR</div>
+        </>
+      ) : (
+        <div className="text-red-600 text-xs font-medium">
+          Ineligible
+          <br />
+          <span className="text-[10px] opacity-75">
+            {dscr.toFixed(2)}x DSCR
+          </span>
         </div>
       )}
-
-      {/* Pricing Grid */}
-      {selectedProduct ? (
-        <div className="bg-white border-2 border-black rounded-3xl p-8">
-          <h2 className="text-3xl font-bold text-center mb-8">{selectedProduct.name} Pricing Grid</h2>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-4 text-left font-semibold">Interest Rate</th>
-                {ltvBuckets.map(ltv => {
-                  const loanAmt = Math.round(purchasePrice * (ltv / 100));
-                  return (
-                    <th key={ltv} className="border p-4 text-center font-semibold">
-                      {ltv}% LTV<br/>
-                      <span className="text-xs font-normal text-gray-600">${loanAmt.toLocaleString()}</span>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {interestRates
-                .filter(rate => ltvBuckets.some(ltv => getPrice(rate, ltv) !== null))
-                .map((rate) => (
-                  <tr key={rate}>
-                    <td className="border p-4 font-medium bg-gray-50">{rate.toFixed(3)}%</td>
-                    {ltvBuckets.map((ltv) => {
-                      const price = getPrice(rate, ltv);
-                      const dscr = calculateDSCR(rate, ltv);
-                      const isEligible = price !== null;
-                      const isSelected = selectedRate === rate.toFixed(3) && selectedLTV === ltv;
-
-                      return (
-                        <td
-                          key={ltv}
-                          onClick={() => isEligible && handleCellClick(rate, ltv)}
-                          className={`border p-4 text-center cursor-pointer hover:bg-blue-50 transition-colors ${isSelected ? 'bg-blue-100 ring-2 ring-blue-500' : ''} ${!isEligible ? 'bg-red-50' : ''}`}
-                        >
-                          {isEligible && price !== null ? (
-                            <>
-                              <div className="font-bold text-lg">{getDisplayValue(rate, ltv)}</div>
-                              <div className="text-xs text-gray-600">{dscr.toFixed(2)}x DSCR</div>
-                            </>
-                          ) : (
-                            <div className="text-red-600 text-xs font-medium">Ineligible</div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
+    </td>
+  );
+})}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+) : (
+  // ... your existing no product messag
         <div className="bg-white border rounded-3xl p-16 text-center text-xl text-gray-500">
           Select a loan product above to view the pricing grid
         </div>
       )}
 
-      {/* Selected Quotes + Actions */}
+      {/* Selected Quotes */}
       {selectedQuotes.length > 0 && (
         <div className="mt-8 bg-white border rounded-3xl p-6">
           <h3 className="font-semibold mb-4">Selected Quotes ({selectedQuotes.length}/5)</h3>
@@ -828,16 +869,6 @@ function NewLoanContent() {
               💾 Save Quote & Start Full Application →
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Prompt to create application */}
-      {!application && selectedRate && (
-        <div className="mt-8 p-6 bg-amber-50 border border-amber-300 rounded-3xl text-center">
-          <p className="font-medium">Great choice! To lock this rate, please complete the full application.</p>
-          <button onClick={() => router.push('/loan-application')} className="mt-4 px-8 py-4 bg-amber-600 text-white rounded-3xl font-semibold">
-            Start Full Application →
-          </button>
         </div>
       )}
     </div>

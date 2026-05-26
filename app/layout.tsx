@@ -1,16 +1,30 @@
-// app/layout.tsx (updated)
-import { ClerkProvider } from "@clerk/nextjs";
-import { TenantProvider } from "@/lib/tenant-context";
-import "./globals.css";
+// app/layout.tsx
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+export const metadata: Metadata = {
+  title: 'Loan-App',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ClerkProvider>
-      <TenantProvider>
-        <html lang="en">
-          <body>{children}</body>
-        </html>
-      </TenantProvider>
+      <html lang="en" className={inter.variable}>
+        <body className="antialiased bg-gray-50">
+          {children}
+        </body>
+      </html>
     </ClerkProvider>
   );
 }

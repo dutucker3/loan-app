@@ -1,36 +1,48 @@
+// lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '@clerk/nextjs';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase public environment variables');
-}
+console.log("🔍 [Supabase Init] URL:", supabaseUrl ? "✅ LOADED" : "❌ MISSING");
+console.log("🔍 [Supabase Init] Publishable Key:", supabaseKey ? "✅ LOADED" : "❌ MISSING");
 
-// Public client - safe for browser
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let clientInstance: any = null;
 
-// Admin client - only available on server
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+export const createClientComponentClient = () => {
+  const { getToken } = useAuth();
+
+  if (!clientInstance) {
+    console.log("🛠️ [Supabase] Creating new client instance...");
+    clientInstance = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        async fetch(url: string, options: any = {}) {
+          console.log(`🌐 [Supabase Fetch] ${url}`);
+
+          try {
+            const token = await getToken();
+            if (token) {
+              options.headers = {
+                ...options.headers,
+                Authorization: `Bearer ${token}`,
+                apikey: supabaseKey,
+              };
+              console.log("🔑 [Supabase] Clerk token + apikey attached successfully");
+            } else {
+              console.warn("⚠️ [Supabase] No Clerk token received");
+            }
+          } catch (err) {
+            console.error("❌ [Supabase] Failed to get Clerk token:", err);
+          }
+
+          return fetch(url, options);
+        },
       },
-    })
-  : null;
-  // Add this function
-export async function getCurrentOrganization(supabase: any, clerkOrgId: string) {
-  const { data } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('clerk_org_id', clerkOrgId)
-    .single();
-  return data;
-}
+    });
+  } else {
+    console.log("♻️ [Supabase] Reusing existing client instance");
+  }
 
-// Only log on server
-if (!supabaseAdmin && typeof window === 'undefined') {
-  console.warn('⚠️ SUPABASE_SECRET_KEY is missing - server uploads will fail');
-}
+  return clientInstance;
+};

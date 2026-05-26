@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 export type UserWithRole = {
   id: string;
   role: Role | string;
+  custom_role?: string;           // ← Added for Clerk JWT
   organization_id?: string | null;
   parent_id?: string | null;
 };
@@ -11,16 +12,29 @@ export type UserWithRole = {
 export const hasPermission = (
   user: UserWithRole | null,
   requiredRole: Role | Role[],
-  options?: { childOrgAllowed?: boolean }
 ): boolean => {
   if (!user) return false;
 
-  const userRole = user.role as Role;
+  // Prioritize custom_role from Clerk JWT, fallback to role
+  const userRole = (user.custom_role || user.role) as Role;
   const required = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
 
-  // Super Admin = God Mode
-  if (userRole === 'SUPER_ADMIN') return true;
+  // ==================== GLOBAL / APP LEVEL ====================
+  if (userRole === 'SUPER_ADMIN') return true;           // God Mode
+  if (userRole === 'ADMIN') return true;                 // App-level Admin
 
+  // ==================== NEW ROLES ====================
+  if (userRole === 'ORG_ADMIN') {
+    return required.some(r => 
+      ['ORG_ADMIN', 'BROKER', 'BROKER_AE', 'SENIOR_BROKER', 'JUNIOR_BROKER'].includes(r as string)
+    );
+  }
+
+  if (userRole === 'TECH_SUPPORT') {
+    return required.some(r => ['TECH_SUPPORT'].includes(r as string));
+  }
+
+  // ==================== EXISTING ROLES ====================
   return required.some((r) => {
     switch (r) {
       case 'SUPER_ADMIN':
@@ -28,6 +42,12 @@ export const hasPermission = (
 
       case 'ADMIN':
         return ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
+
+      case 'ORG_ADMIN':
+        return userRole === 'ORG_ADMIN';
+
+      case 'TECH_SUPPORT':
+        return userRole === 'TECH_SUPPORT';
 
       case 'LOAN_UNDERWRITER':
         return ['LOAN_UNDERWRITER', 'ADMIN', 'SUPER_ADMIN', 'LENDING_SUPERVISOR'].includes(userRole);
@@ -43,7 +63,7 @@ export const hasPermission = (
       case 'JUNIOR_BROKER':
       case 'BROKER':
       case 'BROKER_AE':
-        return ['SENIOR_BROKER', 'JUNIOR_BROKER', 'BROKER', 'BROKER_AE', 'ADMIN', 'SUPER_ADMIN'].includes(userRole);
+        return ['SENIOR_BROKER', 'JUNIOR_BROKER', 'BROKER', 'BROKER_AE', 'ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(userRole);
 
       case 'BORROWER':
         return userRole === 'BORROWER';
@@ -58,21 +78,16 @@ export const hasPermission = (
 export const canViewLoan = (user: UserWithRole, loan: any): boolean => {
   if (!user || !loan) return false;
 
-  // Super Admin / Admin / Lending Supervisor see everything
-  if (hasPermission(user, ['SUPER_ADMIN', 'ADMIN', 'LENDING_SUPERVISOR'])) return true;
+  if (hasPermission(user, ['SUPER_ADMIN', 'ADMIN'])) return true;
 
-  // Borrower can only see their own loans
   if (user.role === 'BORROWER') {
     return loan.originator_id === user.id;
   }
 
-  // Same organization or child
   if (user.organization_id && loan.organization_id === user.organization_id) return true;
 
-  // Broker / AE can see their originated loans
   if (loan.originator_id === user.id) return true;
 
-  // Processor / Underwriter assigned to the loan
   if (loan.processor_id === user.id || loan.underwriter_id === user.id) return true;
 
   return false;
@@ -80,12 +95,9 @@ export const canViewLoan = (user: UserWithRole, loan: any): boolean => {
 
 export const canEditLoan = (user: UserWithRole, loan: any): boolean => {
   if (!canViewLoan(user, loan)) return false;
-
-  // Borrowers cannot edit loans (they can only view and submit documents)
   if (user.role === 'BORROWER') return false;
 
-  // Processors and above can edit
-  return hasPermission(user, ['LOAN_PROCESSOR', 'LOAN_UNDERWRITER', 'ADMIN', 'SUPER_ADMIN', 'LENDING_SUPERVISOR']);
+  return hasPermission(user, ['LOAN_PROCESSOR', 'LOAN_UNDERWRITER', 'ADMIN', 'SUPER_ADMIN', 'LENDING_SUPERVISOR', 'ORG_ADMIN']);
 };
 
 export const isBorrower = (user: UserWithRole): boolean => {
@@ -93,14 +105,27 @@ export const isBorrower = (user: UserWithRole): boolean => {
 };
 
 export const canAddCustomCondition = (user: UserWithRole): boolean => {
-  return hasPermission(user, ['LOAN_PROCESSOR', 'LOAN_UNDERWRITER', 'ADMIN', 'SUPER_ADMIN', 'LENDING_SUPERVISOR']);
+  return hasPermission(user, ['LOAN_PROCESSOR', 'LOAN_UNDERWRITER', 'ADMIN', 'SUPER_ADMIN', 'LENDING_SUPERVISOR', 'ORG_ADMIN']);
 };
 
-// Bonus: Retail vs Wholesale access
+// Pricing Access
 export const canSeeRetailPricing = (user: UserWithRole): boolean => {
   return user.role === 'BORROWER';
 };
 
 export const canSeeWholesalePricing = (user: UserWithRole): boolean => {
-  return hasPermission(user, ['BROKER', 'BROKER_AE', 'SENIOR_BROKER', 'JUNIOR_BROKER', 'ACCOUNT_EXECUTIVE', 'SENIOR_ACCOUNT_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN']);
+  return hasPermission(user, ['BROKER', 'BROKER_AE', 'SENIOR_BROKER', 'JUNIOR_BROKER', 'ACCOUNT_EXECUTIVE', 'SENIOR_ACCOUNT_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN']);
+};
+// Add this at the end of lib/permissions.ts
+
+export const canAccessAppDashboard = (user: UserWithRole): boolean => {
+  if (!user?.role) return false;
+  const role = (user.custom_role || user.role) as string;
+  return ['SUPER_ADMIN', 'ADMIN', 'TECH_SUPPORT'].includes(role);
+};
+
+export const canSeeAllOrganizations = (user: UserWithRole): boolean => {
+  if (!user?.role) return false;
+  const role = (user.custom_role || user.role) as string;
+  return ['SUPER_ADMIN', 'ADMIN'].includes(role);
 };

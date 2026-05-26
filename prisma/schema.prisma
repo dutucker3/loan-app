@@ -6,7 +6,8 @@ datasource db {
   provider = "postgresql"
 }
 
-/// This model contains row level security and requires additional setup for migrations.
+// === EXISTING MODELS (unchanged except for new relations) ===
+
 model documents {
   id                BigInt    @id @default(autoincrement())
   loan_id           BigInt
@@ -70,7 +71,7 @@ model loan_products {
   description            String?
   guidelines_url         String?
   created_at             DateTime?      @default(now()) @db.Timestamptz(6)
-  pricing_matrix         Json?          @default("{\"series\": {\"standard\": {\"maxLTV\": 75, \"baseAdjustment\": 0}, \"signature\": {\"maxLTV\": 80, \"baseAdjustment\": -0.25}, \"streamline\": {\"maxLTV\": 80, \"baseAdjustment\": -0.5}}, \"baseRate\": 9.0, \"ltvAdjustments\": {\"60\": 0, \"65\": -0.125, \"70\": -0.375, \"75\": -0.75, \"80\": -1.25}, \"dscrAdjustments\": {\"1.25+\": 0, \"0.75-0.99\": -0.75, \"1.00-1.14\": -0.375, \"1.15-1.24\": -0.125}, \"ficoAdjustments\": {\"780+\": 0, \"660-679\": -2.0, \"680-699\": -1.25, \"700-719\": -0.75, \"720-739\": -0.375, \"740-759\": -0.25, \"760-779\": -0.125}}")
+  pricing_matrix         Json?          
   active                 Boolean?       @default(true)
   organization_id        String?
   default_profit_percent Decimal?       @default(1.0) @db.Decimal
@@ -97,7 +98,6 @@ model loans {
   property_type    String?
   amortization     String?
 
-  // === NEW FIELDS FOR PERMISSIONS & WHITE-LABEL ===
   processor_id     String?
   underwriter_id   String?
   organization_id  String?
@@ -123,12 +123,13 @@ model organizations {
   updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
   clerk_org_id      String?             @unique
 
-  // === NEW: Dual Markup Support ===
-  wholesale_markup  Decimal?            @default(0) @db.Decimal(5, 2)  // for brokers
-  retail_markup     Decimal?            @default(0) @db.Decimal(5, 2)  // for borrowers
+  // === Markup Fields (we'll use the new table going forward) ===
+  wholesale_markup  Decimal?            @default(0) @db.Decimal(5, 2)
+  retail_markup     Decimal?            @default(0) @db.Decimal(5, 2)
 
   loan_applications loan_applications[]
   loan_products     loan_products[]
+  markups           pricing_markups[]     // ← NEW
 }
 
 model pending_organizations {
@@ -153,25 +154,53 @@ model profiles {
 }
 
 model users {
-  id              String    @id
-  email           String?
-  full_name       String?
-  role            String?   @default("BROKER_AE")
-  created_at      DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
-  parent_id       String?
-  organization_id String?     // ← NEW
+  id                  String    @id
+  email               String?
+  full_name           String?
+  role                String?   @default("BROKER_AE")
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  parent_id           String?
+  organization_id     String?
 
-  users           users?    @relation("usersTousers", fields: [parent_id], references: [id])
-  other_users     users[]   @relation("usersTousers")
+  // === NEW BROKER WHITE-LABEL FIELDS ===
+  broker_company_name String?
+  broker_logo_url     String?
+  broker_custom_url   String?
 
-  @@index([role], map: "idx_users_role")
+  users               users?    @relation("usersTousers", fields: [parent_id], references: [id])
+  other_users         users[]   @relation("usersTousers")
+  brokerMarkups       pricing_markups[] @relation("BrokerMarkups")
+
+  @@index([role])
 }
 
-// ==================== NEW ENUM FOR PERMISSIONS ====================
+// ==================== NEW MODELS ====================
+
+model pricing_markups {
+  id                String   @id @default(cuid())
+  organization_id   String
+  broker_id         String?           // null = organization-wide default
+  markup_type       String   // 'wholesale', 'retail', 'broker_retail'
+  value             Decimal  @db.Decimal(5, 3)  // e.g. 1.25
+  description       String?
+  active            Boolean  @default(true)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt         @db.Timestamptz(6)
+
+  organization      organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  broker            users?        @relation("BrokerMarkups", fields: [broker_id], references: [id])
+
+  @@index([organization_id, broker_id, markup_type])
+  @@index([markup_type])
+}
+
+// ==================== ENUM ====================
 enum Role {
   SUPER_ADMIN
   ADMIN
+  TECH_SUPPORT 
+  ORG_ADMIN
   LOAN_UNDERWRITER
   LOAN_PROCESSOR
   SENIOR_ACCOUNT_EXECUTIVE
@@ -181,5 +210,5 @@ enum Role {
   LENDING_SUPERVISOR
   BROKER
   BROKER_AE
-  BORROWER          // ← NEW ROLE
+  BORROWER
 }

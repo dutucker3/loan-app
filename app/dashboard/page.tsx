@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUser, useClerk, OrganizationSwitcher } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClientComponentClient } from '@/lib/supabase';
 import TenantHeader from '@/components/TenantHeader';
 import NextImage from 'next/image';
 import { hasPermission } from '@/lib/permissions';
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
-
+ // Create Supabase client with Clerk JWT support
   const [activeLoans, setActiveLoans] = useState<any[]>([]);
   const [closedLoans, setClosedLoans] = useState<any[]>([]);
   const [unassignedLoans, setUnassignedLoans] = useState<any[]>([]);
@@ -58,6 +58,9 @@ const [activeTab, setActiveTab] = useState<
   const canManageUsers = hasPermission(currentUserForPerms, ['SUPER_ADMIN', 'ADMIN', 'LENDING_SUPERVISOR', 'SENIOR_ACCOUNT_EXECUTIVE']);
 
   const handleLogout = () => signOut({ redirectUrl: '/' });
+  // Create Supabase client with Clerk JWT support
+  const supabase = createClientComponentClient();
+  
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -66,81 +69,86 @@ const [activeTab, setActiveTab] = useState<
     }
 
     async function loadAllData() {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role, organization_id')
-        .eq('id', user.id)
-        .single();
+      try {
+        console.log("🔄 Starting loadAllData...");
 
-      const role = userData?.role || 'BROKER_AE';
-      setCurrentUserRole(role);
-      setCurrentUserOrgId(userData?.organization_id || null);
-
-      // Loans
-      let loansQuery = supabase.from('loans').select('*').order('created_at', { ascending: false });
-      if (!isAdminOrHigher) {
-        loansQuery = loansQuery.or(`originator_id.eq.${user.id},processor_id.eq.${user.id},underwriter_id.eq.${user.id}`);
-      }
-      const { data: loansData } = await loansQuery;
-
-      setActiveLoans(loansData?.filter(l => 
-        ['Processing', 'Underwriting', 'Clear to Close'].includes(l.loan_status || '')
-      ) || []);
-
-      setClosedLoans(loansData?.filter(l => 
-        ['Closed and Funded', 'On Hold', 'Rejected'].includes(l.loan_status || '')
-      ) || []);
-
-      // Applications
-      const { data: appData } = await supabase
-        .from('loan_applications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      setApplications(appData || []);
-
-      if (canManageUsers) {
-        const { data: usersData } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-        setUsers(usersData || []);
-      }
-
-      if (isProcessorOrHigher) {
-        const { data: procData } = await supabase
+        // Get fresh user data from Supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id, full_name, email, role')
-          .in('role', ['LOAN_PROCESSOR', 'LENDING_SUPERVISOR', 'SUPER_ADMIN', 'ADMIN']);
-        setProcessors(procData || []);
-      }
+          .select('role, organization_id')
+          .eq('id', user.id)
+          .single();
 
-        // === SUPER ADMIN: Show ALL products across all organizations ===
-      if (isSuperAdmin) {
-        const { data: productsData } = await supabase
-          .from('loan_products')
+        if (userError) console.error("User fetch error:", userError);
+
+        const role = userData?.role || 'BROKER_AE';
+        const orgId = userData?.organization_id;
+
+        console.log(`✅ User Role Loaded: ${role} | Org ID: ${orgId}`);
+
+        setCurrentUserRole(role);
+        setCurrentUserOrgId(orgId);
+
+        // === LOANS ===
+        const { data: loansData, error: loansError } = await supabase
+          .from('loans')
           .select('*')
           .order('created_at', { ascending: false });
-        setProducts(productsData || []);
-      } 
-      // Regular admins / org users
-      else if (isAdminOrHigher || hasPermission(currentUserForPerms, 'manage_products')) {
-        let orgIdToUse = userData?.organization_id || clerkOrg?.id;
 
-        if (orgIdToUse) {
+        if (loansError) console.error("Loans error:", loansError);
+
+        const processedLoans = (loansData || []).map((loan: any) => ({
+          ...loan,
+          broker_company_name: '—'
+        }));
+
+        setActiveLoans(processedLoans.filter(l => 
+          ['Processing', 'Underwriting', 'Clear to Close'].includes(l.loan_status || l.status || '')
+        ));
+
+        setClosedLoans(processedLoans.filter(l => 
+          ['Closed and Funded', 'On Hold', 'Rejected'].includes(l.loan_status || l.status || '')
+        ));
+
+        // === APPLICATIONS ===
+        const { data: appData } = await supabase
+          .from('loan_applications')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        setApplications(appData || []);
+
+        // === USERS & PRODUCTS ===
+        if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('*')
+            .order('created_at', { ascending: false });
+          setUsers(usersData || []);
+
           const { data: productsData } = await supabase
             .from('loan_products')
             .select('*')
-            .eq('organization_id', orgIdToUse)
+            .order('created_at', { ascending: false });
+          setProducts(productsData || []);
+        } else if (orgId) {
+          const { data: productsData } = await supabase
+            .from('loan_products')
+            .select('*')
+            .eq('organization_id', orgId)
             .order('created_at', { ascending: false });
           setProducts(productsData || []);
         }
-      }
 
-      setLoading(false);
+      } catch (err: any) {
+        console.error("loadAllData failed:", err);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadAllData();
-  }, [isLoaded, user, router, isAdminOrHigher, canManageUsers, isProcessorOrHigher]);
-  // Refresh Products when Products tab is selected
+  }, [isLoaded, user, router]);
   useEffect(() => {
     if (activeTab === 'products') {
       const fetchProducts = async () => {
@@ -233,25 +241,28 @@ const [activeTab, setActiveTab] = useState<
     }
   };
 
-  const addNewUser = async () => {
-    if (!newUserEmail.trim()) return;
-    const { error } = await supabase
-      .from('users')
-      .insert({
-        id: 'clerk_' + Date.now(),
-        email: newUserEmail.trim(),
-        full_name: newUserEmail.split('@')[0],
-        role: newUserRole,
-        parent_id: user?.id,
-      });
+const addNewUser = async () => {
+  if (!newUserEmail.trim()) return;
 
-    if (error) alert('Failed to add user: ' + error.message);
-    else {
-      alert('User added successfully!');
-      setNewUserEmail('');
-      window.location.reload();
-    }
-  };
+  const response = await fetch('/api/create-clerk-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: newUserEmail.trim(),
+      role: newUserRole,
+      full_name: newUserEmail.split('@')[0], // optional
+    }),
+  });
+
+  if (response.ok) {
+    alert('✅ User created successfully in Clerk and Supabase!');
+    setNewUserEmail('');
+    window.location.reload();
+  } else {
+    const data = await response.json();
+    alert('Error: ' + data.error);
+  }
+};
 
   const startEdit = (u: any) => {
     setEditingUser(u);
@@ -368,7 +379,7 @@ const [activeTab, setActiveTab] = useState<
           </button>
         )}
    {/* === PRODUCTS TAB === */}
-        {(isSuperAdmin || isAdmin || hasPermission('manage_products')) && (
+        {(isSuperAdmin || isAdminOrHigher || hasPermission('manage_products')) && (
           <button 
             onClick={() => { setActiveTab('products'); }}
             className={`pb-4 font-medium whitespace-nowrap flex items-center gap-2 ${activeTab === 'products' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
@@ -434,36 +445,60 @@ const [activeTab, setActiveTab] = useState<
           <h2 className="text-2xl font-semibold mb-6">Pending Applications</h2>
           {pendingApps.length === 0 ? <p className="text-gray-500">No pending applications yet.</p> : (
             pendingApps.map(app => (
-              <div key={app.id} className="border rounded-3xl p-6 mb-4 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{app.form_data?.propertyAddress || 'Untitled Property'}</p>
-                  <p className="text-sm text-gray-500 capitalize">Status: {app.status}</p>
-                </div>
-                <button onClick={() => router.push(`/loans/new?id=${app.id}`)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl">View Pricing</button>
-              </div>
+  <div key={app.id} className="border rounded-3xl p-6 mb-4 flex justify-between items-center">
+    <div>
+      <p className="font-medium">{app.form_data?.propertyAddress || 'Untitled Property'}</p>
+      <p className="text-sm text-gray-500">
+        Broker: <span className="font-medium">{app.broker_company_name || '—'}</span>
+      </p>
+      <p className="text-sm text-gray-500 capitalize">Status: {app.status}</p>
+    </div>
+    <button onClick={() => router.push(`/loans/new?id=${app.id}`)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl">
+      View Pricing
+    </button>
+  </div>
             ))
           )}
         </div>
       )}
 
-      {(activeTab === 'processing' || activeTab === 'closed') && (
-        <div className="bg-white rounded-3xl shadow-sm border divide-y">
-          {(activeTab === 'processing' ? activeLoans : closedLoans).map((loan) => (
-            <div key={loan.id} className="p-8 hover:bg-gray-50 flex justify-between items-center group cursor-pointer" onClick={() => router.push(`/loans/${loan.id}`)}>
-              <div>
-                <div className="font-semibold text-xl">Loan #{loan.id}</div>
-                <div className="text-gray-600 mt-1">{loan.property_address || 'No address'}</div>
-              </div>
-              <div className="flex items-center gap-6">
-                <select defaultValue={loan.loan_status || 'Processing'} onClick={(e) => e.stopPropagation()} className="bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm">
-                  {loanStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <div className="opacity-0 group-hover:opacity-100 text-blue-600 font-medium">View Details →</div>
-              </div>
-            </div>
-          ))}
+    {/* Inside the processing / closed loans rendering section */}
+
+{(activeTab === 'processing' || activeTab === 'closed') && (
+  <div className="bg-white rounded-3xl shadow-sm border divide-y">
+    {(activeTab === 'processing' ? activeLoans : closedLoans).map((loan) => (
+      <div 
+        key={loan.id} 
+        className="p-8 hover:bg-gray-50 flex justify-between items-center group cursor-pointer" 
+        onClick={() => router.push(`/loans/${loan.id}`)}
+      >
+        <div className="flex-1">
+          <div className="font-semibold text-xl">Loan #{loan.id}</div>
+          <div className="text-gray-600 mt-1">{loan.property_address || 'No address'}</div>
+          
+          {/* NEW: Broker Company Name Display */}
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-sm text-gray-500">Broker:</span>
+            <span className="font-medium text-blue-700">
+              {loan.broker_company_name || loan.originator_full_name || '—'}
+            </span>
+          </div>
         </div>
-      )}
+
+        <div className="flex items-center gap-6">
+          <select 
+            defaultValue={loan.loan_status || 'Processing'} 
+            onClick={(e) => e.stopPropagation()} 
+            className="bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm"
+          >
+            {loanStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <div className="opacity-0 group-hover:opacity-100 text-blue-600 font-medium">View Details →</div>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
       {/* ====================== PRODUCTS TAB ====================== */}
       {activeTab === 'products' && (isSuperAdmin || isAdminOrHigher || hasPermission(currentUserForPerms, 'manage_products')) && (
         <div className="bg-white rounded-3xl border p-8">

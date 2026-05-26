@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useOrganization } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
 import TenantHeader from '@/components/TenantHeader';
 
@@ -53,7 +53,7 @@ export default function ProductDetailPage() {
       .update({
         name: product.name,
         description: product.description,
-        pricing_matrix: product.pricing_matrix,
+        pricing_matrix: product.pricing_matrix,        // now only contains pricing logic (no margins)
         standard_conditions: {
           purchase: purchaseConditions,
           refinance: refinanceConditions,
@@ -139,13 +139,15 @@ export default function ProductDetailPage() {
           <h1 className="text-3xl font-bold">{product.name}</h1>
           <p className="text-gray-500">{product.description || 'No description'}</p>
         </div>
- <button
+
+        <div className="flex gap-4">
+          <button
             onClick={() => router.push(`/products/${productId}/adjustments`)}
             className="px-8 py-4 bg-violet-600 text-white rounded-3xl font-semibold hover:bg-violet-700 flex items-center gap-2"
           >
             ⚙️ All Adjustments Tables
           </button>
-        <div className="flex gap-4">
+
           <button
             onClick={saveProduct}
             disabled={saving}
@@ -153,12 +155,14 @@ export default function ProductDetailPage() {
           >
             {saving ? 'Saving...' : '💾 Save Product'}
           </button>
+
           <button
             onClick={copyProduct}
             className="px-8 py-4 bg-indigo-600 text-white rounded-3xl font-semibold hover:bg-indigo-700"
           >
             📋 Copy Product
           </button>
+
           <button
             onClick={() => router.push('/products')}
             className="px-8 py-4 bg-gray-200 rounded-3xl font-semibold hover:bg-gray-300"
@@ -171,9 +175,6 @@ export default function ProductDetailPage() {
       {/* ====================== BASE RATE TABLE ====================== */}
       <div className="bg-white p-8 rounded-3xl border mb-12">
         <h2 className="text-2xl font-semibold mb-6">Base Rate Table</h2>
-        <p className="text-gray-500 mb-6">This table is managed on the main product page.</p>
-        
-        {/* Simple Base Rate Table (you can expand later) */}
         <table className="w-full border border-gray-300 text-sm">
           <thead>
             <tr className="bg-gray-100">
@@ -190,136 +191,6 @@ export default function ProductDetailPage() {
             ))}
           </tbody>
         </table>
-      </div>
-
-            {/* ====================== MARKUP SECTION ====================== */}
-      <div className="bg-white p-8 rounded-3xl border mt-12">
-        <h2 className="text-2xl font-semibold mb-8">Markup & Price Controls</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <label className="block text-sm font-medium mb-2">Wholesale Markup (%)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              value={product?.pricing_matrix?.markup?.wholesaleMarkup || 1} 
-              onChange={(e) => {
-                const newMarkup = {
-                  ...(product.pricing_matrix?.markup || {}),
-                  wholesaleMarkup: parseFloat(e.target.value) || 1
-                };
-                setProduct(prev => ({
-                  ...prev,
-                  pricing_matrix: {
-                    ...prev.pricing_matrix,
-                    markup: newMarkup
-                  }
-                }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Retail Markup (%)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              value={product?.pricing_matrix?.markup?.retailMarkup || 3} 
-              onChange={(e) => {
-                const newMarkup = {
-                  ...(product.pricing_matrix?.markup || {}),
-                  retailMarkup: parseFloat(e.target.value) || 3
-                };
-                setProduct(prev => ({
-                  ...prev,
-                  pricing_matrix: {
-                    ...prev.pricing_matrix,
-                    markup: newMarkup
-                  }
-                }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Wholesale Price Floor</label>
-            <input 
-              type="number" step="0.01" 
-              value={product?.pricing_matrix?.markup?.wholesalePriceFloor || 97} 
-              onChange={(e) => {
-                const newMarkup = { ...(product.pricing_matrix?.markup || {}), wholesalePriceFloor: parseFloat(e.target.value) || 97 };
-                setProduct(prev => ({ ...prev, pricing_matrix: { ...prev.pricing_matrix, markup: newMarkup } }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Wholesale Price Ceiling</label>
-            <input 
-              type="number" step="0.01" 
-              value={product?.pricing_matrix?.markup?.wholesalePriceCeiling || 102} 
-              onChange={(e) => {
-                const newMarkup = { ...(product.pricing_matrix?.markup || {}), wholesalePriceCeiling: parseFloat(e.target.value) || 102 };
-                setProduct(prev => ({ ...prev, pricing_matrix: { ...prev.pricing_matrix, markup: newMarkup } }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Retail Price Floor</label>
-            <input 
-              type="number" step="0.01" 
-              value={product?.pricing_matrix?.markup?.retailPriceFloor || 97} 
-              onChange={(e) => {
-                const newMarkup = { ...(product.pricing_matrix?.markup || {}), retailPriceFloor: parseFloat(e.target.value) || 97 };
-                setProduct(prev => ({ ...prev, pricing_matrix: { ...prev.pricing_matrix, markup: newMarkup } }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Retail Price Ceiling</label>
-            <input 
-              type="number" step="0.01" 
-              value={product?.pricing_matrix?.markup?.retailPriceCeiling || 100} 
-              onChange={(e) => {
-                const newMarkup = { ...(product.pricing_matrix?.markup || {}), retailPriceCeiling: parseFloat(e.target.value) || 100 };
-                setProduct(prev => ({ ...prev, pricing_matrix: { ...prev.pricing_matrix, markup: newMarkup } }));
-              }} 
-              className="w-full px-4 py-3 border rounded-2xl" 
-            />
-          </div>
-
-          {/* Prepayment Ceilings */}
-          <div className="md:col-span-2 mt-6">
-            <h4 className="font-medium mb-4">Prepayment Penalty Price Ceilings</h4>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[1,2,3,4,5].map(years => (
-                <div key={years}>
-                  <label className="block text-sm font-medium mb-2">{years} Year Prepay Ceiling</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={product?.pricing_matrix?.markup?.[`prepay${years}YearCeiling`] || 100} 
-                    onChange={(e) => {
-                      const newMarkup = { 
-                        ...(product.pricing_matrix?.markup || {}), 
-                        [`prepay${years}YearCeiling`]: parseFloat(e.target.value) || 100 
-                      };
-                      setProduct(prev => ({ ...prev, pricing_matrix: { ...prev.pricing_matrix, markup: newMarkup } }));
-                    }} 
-                    className="w-full px-4 py-3 border rounded-2xl" 
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ====================== UNDERWRITING GUIDELINES ====================== */}

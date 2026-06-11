@@ -5,7 +5,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Basic security check
+    // Basic security check (legacy env var name from previous Postmark inbound setup;
+    // you can rename the env var + update your webhook config when you fully migrate inbound).
     if (body.Secret !== process.env.POSTMARK_INBOUND_WEBHOOK_SECRET) {
       return new Response("Unauthorized", { status: 401 });
     }

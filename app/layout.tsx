@@ -1,16 +1,17 @@
-// app/layout.tsx (updated)
-import { ClerkProvider } from "@clerk/nextjs";
+// app/layout.tsx (updated - Clerk fully purged)
 import { TenantProvider } from "@/lib/tenant-context";
+import AppHeader from "@/components/AppHeader";
 import "./globals.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <TenantProvider>
-        <html lang="en">
-          <body>{children}</body>
-        </html>
-      </TenantProvider>
-    </ClerkProvider>
+    <html lang="en">
+      <body>
+        <TenantProvider>
+          <AppHeader />
+          {children}
+        </TenantProvider>
+      </body>
+    </html>
   );
 }

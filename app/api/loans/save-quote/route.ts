@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { auth } from '@clerk/nextjs/server';
+import { createServerClient } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
     const { borrowerName, borrowerEmail, propertyAddress, loanType, purchasePrice, selectedQuotes, organizationId } = await req.json();
 
-    const { userId } = auth();
+    const supabase = await createServerClient(req);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    }
+    const userId = user.id;
 
     const { data, error } = await supabase
       .from('loan_applications')

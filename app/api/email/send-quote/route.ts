@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as postmark from 'postmark';
+import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
 
-const client = new postmark.ServerClient(process.env.POSTMARK_SERVER_API_TOKEN!);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,20 +20,24 @@ export async function POST(req: NextRequest) {
 
     let orgName = "Your Lending Company";
     let orgLogo = "";
-    let fromEmail = "processing@247sparkplug.com";
+    let fromEmail = process.env.RESEND_FROM || "Lending <support@247sparkplug.com>";
+    let replyTo: string | undefined;
     let appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://yourdomain.com";
 
     if (organizationId) {
       const { data: org } = await supabase
         .from('organizations')
-        .select('name, logo_url, domain, from_email')
+        .select('name, logo_url, domain, from_email, reply_to_email, raw_attrs')
         .eq('id', organizationId)
-        .single();
+        .maybeSingle();
 
       if (org) {
         orgName = org.name || orgName;
         orgLogo = org.logo_url || "";
-        fromEmail = org.from_email?.trim() || fromEmail;
+        const rawFrom = (org as any).raw_attrs?.from_email;
+        const rawReply = (org as any).raw_attrs?.reply_to_email;
+        fromEmail = (org.from_email?.trim() || rawFrom?.trim() || fromEmail);
+        replyTo = org.reply_to_email?.trim() || rawReply?.trim() || replyTo;
         if (org.domain) appBaseUrl = `https://${org.domain}`;
       }
     }
@@ -49,33 +53,33 @@ export async function POST(req: NextRequest) {
     `).join('');
 
     const emailHtml = `
-      <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:20px;">
-        ${orgLogo ? `<img src="${orgLogo}" style="max-height:80px;margin-bottom:20px;" alt="${orgName}"/>` : ''}
-        <h2>Your Loan Quotes – ${orgName}</h2>
-        <p>Hi ${borrowerName},</p>
-        <p>Here are your personalized quotes for <strong>${propertyAddress || 'the property'}</strong>:</p>
+      <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; color:#111;">
+        ${orgLogo ? `<img src="${orgLogo}" style="max-height:60px;margin-bottom:16px;" alt="${orgName}"/>` : ''}
+        <h2 style="margin:0 0 8px;">Your Loan Quotes — ${orgName}</h2>
+        <p style="margin:0 0 12px;">Hi ${borrowerName},</p>
+        <p style="margin:0 0 12px;">Here are your personalized quotes for <strong>${propertyAddress || 'the property'}</strong>:</p>
         ${quotesHtml}
-        <p style="margin:35px 0;">
-          <a href="${appBaseUrl}/loan-application" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:600;display:inline-block;">
-            Continue Application & Lock Your Rate →
+        <p style="margin: 20px 0;">
+          <a href="${appBaseUrl}/loan-application" style="background:#1e40af;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;display:inline-block;">
+            Continue Application &amp; Lock Your Rate →
           </a>
         </p>
-        <p style="color:#64748b;font-size:14px;">These quotes are valid for a limited time.</p>
+        <p style="color:#64748b;font-size:14px;margin:0;">These quotes are valid for a limited time.</p>
       </div>
     `;
 
-    await client.sendEmail({
-      From: fromEmail,
-      To: borrowerEmail,
-      Subject: `Your Loan Quotes - ${orgName}`,
-      HtmlBody: emailHtml,
-      MessageStream: "outbound",
+    await resend.emails.send({
+      from: fromEmail,
+      to: borrowerEmail,
+      replyTo,
+      subject: `Your Loan Quotes - ${orgName}`,
+      html: emailHtml,
     });
 
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error(error);
+    console.error('Resend quote email error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

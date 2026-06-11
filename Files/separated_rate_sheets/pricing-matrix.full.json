@@ -1,0 +1,2546 @@
+{
+  "baseRates": {
+    "5.875": "95.145",
+    "6.000": "96.020",
+    "6.125": "96.738",
+    "6.250": "97.425",
+    "6.375": "98.113",
+    "6.500": "98.800",
+    "6.625": "99.425",
+    "6.750": "100.050",
+    "6.875": "100.675",
+    "7.000": "101.300",
+    "7.125": "101.925",
+    "7.250": "102.550",
+    "7.375": "103.082",
+    "7.500": "103.519",
+    "7.625": "103.957",
+    "7.750": "104.394",
+    "7.875": "104.769",
+    "8.000": "105.144",
+    "8.125": "105.519",
+    "8.250": "105.894",
+    "8.375": "106.269",
+    "8.500": "106.582",
+    "8.625": "106.894",
+    "8.750": "107.207",
+    "8.875": "107.457",
+    "9.000": "107.707",
+    "9.125": "107.957",
+    "9.250": "108.207"
+  },
+  "dscrMaxLtv": {
+    ">=1.25x": {
+      "780+": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "760-779": {
+        "125001-150000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        }
+      },
+      "740-759": {
+        "125001-150000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        }
+      },
+      "720-739": {
+        "125001-150000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        }
+      },
+      "700-719": {
+        "125001-150000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        }
+      }
+    },
+    "1.15x - 1.24x": {
+      "780+": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "760-779": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "740-759": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "720-739": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "700-719": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "680-699": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "660-679": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      }
+    },
+    "1.00x - 1.14x": {
+      "780+": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "760-779": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "740-759": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "720-739": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "700-719": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "250001-400000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "400001-500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "500001-750000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "750001-1000000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1000001-1500000": {
+          "Acquisition": "80.0%",
+          "Rate-Term Refinance": "75.0%",
+          "Cash-Out Refinance": "75.0%"
+        },
+        "1500001-2000000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "70.0%",
+          "Cash-Out Refinance": "70.0%"
+        },
+        "2000001-2500000": {
+          "Acquisition": "75.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "2500001-3000000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "65.0%"
+        },
+        "3000001-3500000": {
+          "Acquisition": "70.0%",
+          "Rate-Term Refinance": "65.0%",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "680-699": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "660-679": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      }
+    },
+    "0.75x - 0.99x": {
+      "780+": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "760-779": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "740-759": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "720-739": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "700-719": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "640-659": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "620-639": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      }
+    },
+    "<0.75x": {
+      "780+": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "760-779": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "740-759": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "720-739": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "700-719": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "65.0%",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "100001-125000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "640-659": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      },
+      "620-639": {
+        "125001-150000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "150001-250000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "250001-400000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "400001-500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "500001-750000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "750001-1000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1000001-1500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "1500001-2000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2000001-2500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "2500001-3000000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        },
+        "3000001-3500000": {
+          "Acquisition": "NA",
+          "Rate-Term Refinance": "NA",
+          "Cash-Out Refinance": "NA"
+        }
+      }
+    }
+  },
+  "ficoLtvGrid": {
+    "780+": {
+      "standardKey": "780+",
+      "<=50": "1.500",
+      "50.01-55": "1.375",
+      "55.01-60": "1.250",
+      "60.01-65": "0.875",
+      "65.01-70": "0.250",
+      "70.01-75": "-0.250",
+      "75.01-80": "-1.375"
+    },
+    "760-779": {
+      "standardKey": "760-779",
+      "<=50": "1.500",
+      "50.01-55": "1.375",
+      "55.01-60": "1.250",
+      "60.01-65": "0.875",
+      "65.01-70": "0.250",
+      "70.01-75": "-0.250",
+      "75.01-80": "-1.375"
+    },
+    "740-759": {
+      "standardKey": "740-759",
+      "<=50": "1.500",
+      "50.01-55": "1.375",
+      "55.01-60": "1.125",
+      "60.01-65": "0.750",
+      "65.01-70": "0.000",
+      "70.01-75": "-0.500",
+      "75.01-80": "-1.750"
+    },
+    "720-739": {
+      "standardKey": "720-739",
+      "<=50": "1.250",
+      "50.01-55": "1.125",
+      "55.01-60": "0.875",
+      "60.01-65": "0.500",
+      "65.01-70": "-0.250",
+      "70.01-75": "-0.750",
+      "75.01-80": "-2.500"
+    },
+    "700-719": {
+      "standardKey": "700-719",
+      "<=50": "0.875",
+      "50.01-55": "0.750",
+      "55.01-60": "0.375",
+      "60.01-65": "-0.125",
+      "65.01-70": "-1.000",
+      "70.01-75": "-1.750",
+      "75.01-80": "-4.125"
+    },
+    "680-699": {
+      "standardKey": "680-699",
+      "<=50": "0.500",
+      "50.01-55": "0.125",
+      "55.01-60": "-0.125",
+      "60.01-65": "-1.000",
+      "65.01-70": "-2.500",
+      "70.01-75": "-3.750",
+      "75.01-80": "NA"
+    },
+    "660-679": {
+      "standardKey": "660-679",
+      "<=50": "0.000",
+      "50.01-55": "-0.375",
+      "55.01-60": "-0.875",
+      "60.01-65": "-1.625",
+      "65.01-70": "-3.000",
+      "70.01-75": "-5.500",
+      "75.01-80": "NA"
+    },
+    "640-659": {
+      "standardKey": "640-659",
+      "<=50": "-3.000",
+      "50.01-55": "-3.500",
+      "55.01-60": "-4.000",
+      "60.01-65": "-4.500",
+      "65.01-70": "-5.000",
+      "70.01-75": "-6.000",
+      "75.01-80": "NA"
+    },
+    "620-639": {
+      "standardKey": "620-639",
+      "<=50": "NA",
+      "50.01-55": "NA",
+      "55.01-60": "NA",
+      "60.01-65": "NA",
+      "65.01-70": "NA",
+      "70.01-75": "NA",
+      "75.01-80": "NA"
+    }
+  },
+  "dscrLtvGrid": {
+    "<0.75x": {
+      "standardKey": "<0.75x",
+      "<=50": "-1.750",
+      "50.01-55": "-2.000",
+      "55.01-60": "-2.000",
+      "60.01-65": "-2.750",
+      "65.01-70": "-3.000",
+      "70.01-75": "-4.375",
+      "75.01-80": "NA"
+    },
+    "0.75x - 0.99x": {
+      "standardKey": "0.75x - 0.99x",
+      "<=50": "-0.500",
+      "50.01-55": "-0.625",
+      "55.01-60": "-0.750",
+      "60.01-65": "-1.000",
+      "65.01-70": "-1.500",
+      "70.01-75": "-2.375",
+      "75.01-80": "NA"
+    },
+    "1.00x - 1.14x": {
+      "standardKey": "1.00x - 1.14x",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "1.15x - 1.24x": {
+      "standardKey": "1.15x - 1.24x",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    ">=1.25x": {
+      "standardKey": ">=1.25x",
+      "<=50": "0.500",
+      "50.01-55": "0.500",
+      "55.01-60": "0.500",
+      "60.01-65": "0.625",
+      "65.01-70": "0.625",
+      "70.01-75": "0.625",
+      "75.01-80": "0.625"
+    }
+  },
+  "loanBalanceLtvGrid": {
+    "$75,000 - $100,000": {
+      "standardKey": "$75,000 - $100,000",
+      "<=50": "NA",
+      "50.01-55": "NA",
+      "55.01-60": "NA",
+      "60.01-65": "NA",
+      "65.01-70": "NA",
+      "70.01-75": "NA",
+      "75.01-80": "NA"
+    },
+    "$100,001 - $125,000": {
+      "standardKey": "$100,001 - $125,000",
+      "<=50": "-2.250",
+      "50.01-55": "-2.250",
+      "55.01-60": "-2.375",
+      "60.01-65": "-2.375",
+      "65.01-70": "-2.375",
+      "70.01-75": "-3.250",
+      "75.01-80": "-3.500"
+    },
+    "$125,001 - $150,000": {
+      "standardKey": "$125,001 - $150,000",
+      "<=50": "-2.000",
+      "50.01-55": "-2.000",
+      "55.01-60": "-2.125",
+      "60.01-65": "-2.125",
+      "65.01-70": "-2.125",
+      "70.01-75": "-3.000",
+      "75.01-80": "-3.250"
+    },
+    "$150,001 - $250,000": {
+      "standardKey": "$150,001 - $250,000",
+      "<=50": "-1.250",
+      "50.01-55": "-1.250",
+      "55.01-60": "-1.250",
+      "60.01-65": "-1.250",
+      "65.01-70": "-1.250",
+      "70.01-75": "-1.250",
+      "75.01-80": "-1.500"
+    },
+    "$250,001 - $400,000": {
+      "standardKey": "$250,001 - $400,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "$400,001 - $500,000": {
+      "standardKey": "$400,001 - $500,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "$500,001 - $750,000": {
+      "standardKey": "$500,001 - $750,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "$750,001 - $1,000,000": {
+      "standardKey": "$750,001 - $1,000,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "$1,000,001 - $1,500,000": {
+      "standardKey": "$1,000,001 - $1,500,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "-0.500"
+    },
+    "$1,500,001 - $2,000,000": {
+      "standardKey": "$1,500,001 - $2,000,000",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "-0.125",
+      "60.01-65": "-0.125",
+      "65.01-70": "-0.250",
+      "70.01-75": "-0.500",
+      "75.01-80": "NA"
+    },
+    "$2,000,001 - $2,500,000": {
+      "standardKey": "$2,000,001 - $2,500,000",
+      "<=50": "-0.375",
+      "50.01-55": "-0.375",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.750",
+      "65.01-70": "-1.000",
+      "70.01-75": "NA",
+      "75.01-80": "NA"
+    },
+    "$2,500,001 - $3,000,000": {
+      "standardKey": "$2,500,001 - $3,000,000",
+      "<=50": "-0.750",
+      "50.01-55": "-0.750",
+      "55.01-60": "-0.750",
+      "60.01-65": "-1.125",
+      "65.01-70": "-1.250",
+      "70.01-75": "NA",
+      "75.01-80": "NA"
+    },
+    "$3,000,001 - $3,500,000": {
+      "standardKey": "$3,000,001 - $3,500,000",
+      "<=50": "-1.500",
+      "50.01-55": "-1.500",
+      "55.01-60": "-1.500",
+      "60.01-65": "-1.500",
+      "65.01-70": "-2.000",
+      "70.01-75": "NA",
+      "75.01-80": "NA"
+    }
+  },
+  "propertyTypeAcquisition": {
+    "SFR": {
+      "standardKey": "SFR",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "Condo - Warrantable*": {
+      "standardKey": "Condo - Warrantable*",
+      "<=50": "-0.125",
+      "50.01-55": "-0.125",
+      "55.01-60": "-0.125",
+      "60.01-65": "-0.250",
+      "65.01-70": "-0.500",
+      "70.01-75": "-0.750",
+      "75.01-80": "NA"
+    },
+    "Condo - Non-Warrantable*": {
+      "standardKey": "Condo - Non-Warrantable*",
+      "<=50": "-0.125",
+      "50.01-55": "-0.125",
+      "55.01-60": "-0.125",
+      "60.01-65": "-0.250",
+      "65.01-70": "-0.500",
+      "70.01-75": "-0.750",
+      "75.01-80": "NA"
+    },
+    "Condotel*": {
+      "standardKey": "Condotel*",
+      "<=50": "-1.500",
+      "50.01-55": "-1.500",
+      "55.01-60": "-1.500",
+      "60.01-65": "-1.500",
+      "65.01-70": "-1.500",
+      "70.01-75": "-2.000",
+      "75.01-80": "NA"
+    },
+    "2-4 Unit*": {
+      "standardKey": "2-4 Unit*",
+      "<=50": "-0.500",
+      "50.01-55": "-0.500",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.500",
+      "65.01-70": "-0.750",
+      "70.01-75": "-1.000",
+      "75.01-80": "NA"
+    }
+  },
+  "amortizationAdjustment": {
+    "Fully Amortizing": {
+      "standardKey": "Fully Amortizing",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "Partial-IO (10 Years)*": {
+      "standardKey": "Partial-IO (10 Years)*",
+      "<=50": "-0.500",
+      "50.01-55": "-0.500",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.500",
+      "65.01-70": "-0.625",
+      "70.01-75": "-0.750",
+      "75.01-80": "NA"
+    }
+  },
+  "Prepayment Adjustment": {
+    "5%(60),O(300)": {
+      "standardKey": "5%(60),O(300)",
+      "<=50": "0.875",
+      "50.01-55": "0.875",
+      "55.01-60": "0.875",
+      "60.01-65": "0.875",
+      "65.01-70": "1.000",
+      "70.01-75": "1.000",
+      "75.01-80": "1.000"
+    },
+    "5%(48),O(312)": {
+      "standardKey": "5%(48),O(312)",
+      "<=50": "0.625",
+      "50.01-55": "0.625",
+      "55.01-60": "0.625",
+      "60.01-65": "0.625",
+      "65.01-70": "0.625",
+      "70.01-75": "0.625",
+      "75.01-80": "0.625"
+    },
+    "5%(36),O(324)": {
+      "standardKey": "5%(36),O(324)",
+      "<=50": "0.250",
+      "50.01-55": "0.250",
+      "55.01-60": "0.250",
+      "60.01-65": "0.250",
+      "65.01-70": "0.250",
+      "70.01-75": "0.250",
+      "75.01-80": "0.250"
+    },
+    "5%(24),O(336)": {
+      "standardKey": "5%(24),O(336)",
+      "<=50": "-0.375",
+      "50.01-55": "-0.375",
+      "55.01-60": "-0.375",
+      "60.01-65": "-0.375",
+      "65.01-70": "-0.500",
+      "70.01-75": "-0.500",
+      "75.01-80": "-0.500"
+    },
+    "5%(12),O(348)": {
+      "standardKey": "5%(12),O(348)",
+      "<=50": "N/A",
+      "50.01-55": "N/A",
+      "55.01-60": "N/A",
+      "60.01-65": "N/A",
+      "65.01-70": "N/A",
+      "70.01-75": "N/A",
+      "75.01-80": "N/A"
+    },
+    "5%(12),4%(12),3%(12),2%(12),1%(12),O(300)": {
+      "standardKey": "5%(12),4%(12),3%(12),2%(12),1%(12),O(300)",
+      "<=50": "0.750",
+      "50.01-55": "0.750",
+      "55.01-60": "0.750",
+      "60.01-65": "0.750",
+      "65.01-70": "0.875",
+      "70.01-75": "0.875",
+      "75.01-80": "0.875"
+    },
+    "4%(12),3%(12),2%(12),1%(12),O(312)": {
+      "standardKey": "4%(12),3%(12),2%(12),1%(12),O(312)",
+      "<=50": "-0.500",
+      "50.01-55": "-0.500",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.500",
+      "65.01-70": "-0.625",
+      "70.01-75": "-0.625",
+      "75.01-80": "-0.625"
+    },
+    "3%(12),2%(12),1%(12),O(324)": {
+      "standardKey": "3%(12),2%(12),1%(12),O(324)",
+      "<=50": "-0.500",
+      "50.01-55": "-0.500",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.500",
+      "65.01-70": "-0.625",
+      "70.01-75": "-0.625",
+      "75.01-80": "-0.625"
+    },
+    "2%(12),1%(12),O(336)": {
+      "standardKey": "2%(12),1%(12),O(336)",
+      "<=50": "-1.250",
+      "50.01-55": "-1.250",
+      "55.01-60": "-1.500",
+      "60.01-65": "-1.500",
+      "65.01-70": "-1.500",
+      "70.01-75": "-1.500",
+      "75.01-80": "-1.500"
+    },
+    "1%(12),O(348)": {
+      "standardKey": "1%(12),O(348)",
+      "<=50": "N/A",
+      "50.01-55": "N/A",
+      "55.01-60": "N/A",
+      "60.01-65": "N/A",
+      "65.01-70": "N/A",
+      "70.01-75": "N/A",
+      "75.01-80": "N/A"
+    },
+    "O(360)": {
+      "standardKey": "O(360)",
+      "<=50": "-1.250",
+      "50.01-55": "-1.250",
+      "55.01-60": "-1.500",
+      "60.01-65": "-1.500",
+      "65.01-70": "-1.500",
+      "70.01-75": "-1.500",
+      "75.01-80": "-1.500"
+    }
+  },
+  "Rent Adjustments": {
+    "LTR: In-Place/Market Rent": {
+      "standardKey": "LTR: In-Place/Market Rent",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "0.000"
+    },
+    "STR: TTM Actuals": {
+      "standardKey": "STR: TTM Actuals",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "NA"
+    },
+    "STR: STR 1007 Market Rent (80%)": {
+      "standardKey": "STR: STR 1007 Market Rent (80%)",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "NA"
+    },
+    "STR: AirDNA Projections - 100% (Pro)": {
+      "standardKey": "STR: AirDNA Projections - 100% (Pro)",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "NA"
+    },
+    "STR: AirDNA Projections - 80%": {
+      "standardKey": "STR: AirDNA Projections - 80%",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "NA"
+    },
+    "STR: AirDNA Projections - 75%": {
+      "standardKey": "STR: AirDNA Projections - 75%",
+      "<=50": "0.000",
+      "50.01-55": "0.000",
+      "55.01-60": "0.000",
+      "60.01-65": "0.000",
+      "65.01-70": "0.000",
+      "70.01-75": "0.000",
+      "75.01-80": "NA"
+    }
+  },
+  "Other Adjustments": {
+    "Acquisition": {
+      "standardKey": "Acquisition",
+      "<=50": "0.250",
+      "50.01-55": "0.250",
+      "55.01-60": "0.250",
+      "60.01-65": "0.250",
+      "65.01-70": "0.250",
+      "70.01-75": "0.250",
+      "75.01-80": "0.250"
+    },
+    "Rate-Term Refinance": {
+      "standardKey": "Rate-Term Refinance",
+      "<=50": "-0.125",
+      "50.01-55": "-0.125",
+      "55.01-60": "-0.125",
+      "60.01-65": "-0.125",
+      "65.01-70": "-0.125",
+      "70.01-75": "-0.250",
+      "75.01-80": "NA"
+    },
+    "Cash-Out Refinance (FICO >=720)": {
+      "standardKey": "Cash-Out Refinance (FICO >=720)",
+      "<=50": "-0.500",
+      "50.01-55": "-0.500",
+      "55.01-60": "-0.500",
+      "60.01-65": "-0.625",
+      "65.01-70": "-0.875",
+      "70.01-75": "-1.375",
+      "75.01-80": "NA"
+    },
+    "Cash-Out Refinance (FICO <720)": {
+      "standardKey": "Cash-Out Refinance (FICO <720)",
+      "<=50": "-0.875",
+      "50.01-55": "-0.875",
+      "55.01-60": "-0.875",
+      "60.01-65": "-1.000",
+      "65.01-70": "-1.375",
+      "70.01-75": "-1.625",
+      "75.01-80": "NA"
+    }
+  }
+}

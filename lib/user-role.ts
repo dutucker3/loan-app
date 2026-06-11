@@ -1,4 +1,3 @@
-import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -7,36 +6,57 @@ export type UserRole =
   | 'LENDING_SUPERVISOR'
   | 'SENIOR_AE'
   | 'PROCESSOR'
-  | 'BROKER_AE';
+  | 'BROKER_AE'
+  | 'TECH_SUPPORT';
 
 export function useUserRole() {
-  const { user } = useUser();
   const [role, setRole] = useState<UserRole>('BROKER_AE');
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadRole() {
-      if (!user?.id) {
+    async function loadUserAndRole() {
+      try {
+        const { data: { user: sbUser } } = await supabase.auth.getUser();
+        if (!sbUser?.id) {
+          setLoading(false);
+          return;
+        }
+        setUserId(sbUser.id);
+
+        // Try users table first (clerk_id or id)
+        let { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .or(`id.eq.${sbUser.id},clerk_id.eq.${sbUser.id}`)
+          .maybeSingle();
+
+        if (!data?.role) {
+          // fallback to profiles
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', sbUser.id)
+            .maybeSingle();
+          if (prof?.role) {
+            data = { role: prof.role };
+          }
+        }
+
+        if (data?.role) {
+          setRole(data.role as UserRole);
+        }
+      } catch (e) {
+        console.warn('useUserRole load error', e);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data } = await supabase
-        .from('users')
-        .select('role')
-        .eq('clerk_id', user.id)
-        .single();
-
-      if (data?.role) {
-        setRole(data.role as UserRole);
-      }
-      setLoading(false);
     }
 
-    loadRole();
-  }, [user?.id]);
+    loadUserAndRole();
+  }, []);
 
   const hasRole = (requiredRoles: UserRole[]) => requiredRoles.includes(role);
 
-  return { role, loading, hasRole };
+  return { role, loading, hasRole, userId };
 }

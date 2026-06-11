@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -13,7 +12,6 @@ const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: f
 export default function TermSheetPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useUser();
   const loanId = params.id as string;
 
   const [loan, setLoan] = useState<any>(null);

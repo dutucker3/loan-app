@@ -15,46 +15,115 @@ export default function AdminOverview() {
   const [recentApplications, setRecentApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // For tenant (ORG_ADMIN) scoped views: correct welcome text + card labels + scoped counts
+  const [tenantOrgId, setTenantOrgId] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<string>('');
+  const [currentOrgName, setCurrentOrgName] = useState<string>('');
+
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   async function loadDashboardData() {
     try {
-      // Total Organizations
-      const { count: totalOrganizations } = await supabase
-        .from('organizations')
-        .select('*', { count: 'exact' });
+      // Determine scope for tenant ORG_ADMIN (L1) vs super. Use profile (source of truth).
+      let scopeOrgId: string | null = null;
+      let role = '';
+      let orgName = '';
+      try {
+        const { data: { user: au } } = await supabase.auth.getUser();
+        if (au) {
+          let { data: prof } = await supabase.from('profiles').select('role, organization_id').eq('id', au.id).maybeSingle();
+          if (prof?.role && (prof.role === 'ADMIN' || prof.role === 'ORG_ADMIN' || prof.role === 'SUPER_ADMIN') && prof.organization_id) {
+            scopeOrgId = prof.organization_id;
+            role = prof.role;
+          }
+          if (scopeOrgId) {
+            const { data: orgRow } = await supabase
+              .from('organizations')
+              .select('name')
+              .eq('id', scopeOrgId)
+              .maybeSingle();
+            orgName = orgRow?.name || '';
+          }
+        }
+      } catch {}
 
-      // Pending Applications
-      const { count: pendingApplications } = await supabase
+      setCurrentRole(role);
+      setCurrentOrgName(orgName);
+      setTenantOrgId(scopeOrgId);
+
+      let totalOrganizations: number;
+      let totalUsers: number;
+
+      if (scopeOrgId && role === 'ORG_ADMIN') {
+        // Tenant view: only their sponsored children (matches the "Organizations" list for ORG_ADMIN)
+        const { count: childOrgs } = await supabase
+          .from('organizations')
+          .select('*', { count: 'exact' })
+          .eq('parent_organization_id', scopeOrgId)
+          .eq('approved', true);
+        totalOrganizations = childOrgs || 0;
+
+        // Users belonging to this org (the L1's own team; subpage + detail preview use the same)
+        const { count: orgUsers } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact' })
+          .eq('organization_id', scopeOrgId);
+        totalUsers = orgUsers || 0;
+      } else {
+        // Super / global view
+        const { count: co } = await supabase
+          .from('organizations')
+          .select('*', { count: 'exact' })
+          .neq('name', 'Loan-App Platform');
+        totalOrganizations = co || 0;
+
+        const { count: cu } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact' });
+        totalUsers = cu || 0;
+      }
+
+      // Active Products: already was scoped for ORG_ADMIN to their org
+      let prodQuery = supabase.from('loan_products').select('*', { count: 'exact' }).eq('active', true);
+      if (scopeOrgId) {
+        prodQuery = prodQuery.eq('organization_id', scopeOrgId);
+      }
+      const { count: activeProducts } = await prodQuery;
+
+      // Pending Applications + Recent: use SAFE client-side filtering for ORG_ADMIN (L1 tenant) to avoid
+      // PostgREST 400s on .or() queries (the exact failing URLs seen in console: status=eq.pending&or=(parent_organization_id.eq.org_...)).
+      // Matches the pattern in /api/pending-organizations/route.ts (full fetch then filter on parent or documents._intended...).
+      let pendingApplications = 0;
+      let recent: any[] = [];
+
+      const basePendingQuery = supabase
         .from('pending_organizations')
-        .select('*', { count: 'exact' })
-        .eq('status', 'pending');
+        .select('id, status, parent_organization_id, documents, created_at, company_name, contact_name, email')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
 
-      // Active Products
-      const { count: activeProducts } = await supabase
-        .from('loan_products')
-        .select('*', { count: 'exact' })
-        .eq('active', true);
+      const { data: allPending } = await basePendingQuery;
 
-      // Total Users (optional)
-      const { count: totalUsers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact' });
+      let scopedPending = allPending || [];
+      if (scopeOrgId && role === 'ORG_ADMIN') {
+        scopedPending = scopedPending.filter((r: any) => {
+          const docs = (r.documents || {}) as any;
+          const intended = docs?._intended_parent_organization_id || r.parent_organization_id || null;
+          return intended === scopeOrgId;
+        });
+        console.log('[AdminOverview] scoped pending for ORG_ADMIN', scopeOrgId, 'kept:', scopedPending.length, 'of', (allPending || []).length);
+      }
 
-      // Recent Applications
-      const { data: recent } = await supabase
-        .from('pending_organizations')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      pendingApplications = scopedPending.length;
+      recent = scopedPending.slice(0, 5);
 
       setStats({
-        totalOrganizations: totalOrganizations || 0,
+        totalOrganizations,
         pendingApplications: pendingApplications || 0,
         activeProducts: activeProducts || 0,
-        totalUsers: totalUsers || 0,
+        totalUsers,
       });
 
       setRecentApplications(recent || []);
@@ -73,13 +142,15 @@ export default function AdminOverview() {
     <div>
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-4xl font-bold">Admin Overview</h1>
-        <p className="text-gray-500">Welcome back, Super Admin</p>
+        <p className="text-gray-500">
+          Welcome back{currentOrgName ? `, ${currentOrgName}` : ''}
+        </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         <div className="bg-white rounded-3xl p-8 border shadow-sm">
-          <p className="text-gray-500 text-sm">Total Organizations</p>
+          <p className="text-gray-500 text-sm">{tenantOrgId ? 'Child Organizations' : 'Total Organizations'}</p>
           <p className="text-5xl font-bold mt-4">{stats.totalOrganizations}</p>
         </div>
 

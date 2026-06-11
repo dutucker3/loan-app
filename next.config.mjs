@@ -14,9 +14,10 @@ const nextConfig = {
   },
 
   // Force webpack (more stable for your current setup) + webpack fallback for Supabase/Clerk
-  experimental: {
-    turbopack: false,
-  },
+  // Note: experimental.turbopack removed (was causing "unrecognized key" warnings in Next 15.5+)
+
+  // Allow dev origins for ngrok and local testing to prevent chunk load / cross-origin errors for _next/static
+  allowedDevOrigins: ['aloe-unhelpful-clip.ngrok-free.dev', 'localhost'],
 
   webpack: (config) => {
     config.resolve.fallback = {
